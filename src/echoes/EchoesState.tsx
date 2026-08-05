@@ -68,12 +68,17 @@ export function EchoesProvider({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
+  // Being offline, or the server being unreachable, is an ordinary state for this app —
+  // never an exception the UI has to handle. These swallow fetch failures and leave the
+  // last-known feed on screen; the next poll picks up whenever connectivity returns.
   const initialLoad = useCallback(async (feeling?: FeelId) => {
     setFetching(true);
     try {
       const { items } = await fetchEchoes({ feeling }, sessionRef.current);
       setFeed(items);
       setQueuedItems([]);
+    } catch {
+      // leave the feed as-is
     } finally {
       setFetching(false);
     }
@@ -89,6 +94,8 @@ export function EchoesProvider({ children }: { children: React.ReactNode }) {
       const knownIds = new Set([...feedRef.current.map((e) => e.id), ...queuedItemsRef.current.map((e) => e.id)]);
       const fresh = items.filter((i) => !knownIds.has(i.id));
       if (fresh.length > 0) setQueuedItems((prev) => [...fresh.reverse(), ...prev]);
+    } catch {
+      // leave the queue as-is
     } finally {
       setFetching(false);
     }
