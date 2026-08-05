@@ -10,4 +10,10 @@ export const GOOGLE_CLIENT_IDS = {
   web: extra.googleClientIdWeb || '',
 };
 
-export const googleConfigured = Boolean(GOOGLE_CLIENT_IDS.android || GOOGLE_CLIENT_IDS.ios || GOOGLE_CLIENT_IDS.web);
+/**
+ * The web client ID is the one that decides whether sign-in can work: the native SDK
+ * needs it to return an ID token on Android, and the server needs it in its audience
+ * list to accept that token. The Android client still has to exist in Google Cloud
+ * Console (matched by package name + SHA-1) but is never referenced in code.
+ */
+export const googleConfigured = Boolean(GOOGLE_CLIENT_IDS.web);

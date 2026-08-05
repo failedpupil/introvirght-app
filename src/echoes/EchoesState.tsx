@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import * as SecureStore from 'expo-secure-store';
 import { FeelId } from '../data/content';
 import { ApiError, EchoItem, feltEchoRequest, fetchEchoes, fetchStats, postEchoRequest, signOutRequest } from './api';
-import { AuthedSession } from './authClient';
+import { AuthedSession, googleSignOutNative } from './authClient';
 
 const SESSION_KEY = 'introvirght.echoSession.v1';
 const STATS_KEY = 'introvirght.echoStats.v1';
@@ -183,6 +183,7 @@ export function EchoesProvider({ children }: { children: React.ReactNode }) {
     setQueuedItems([]);
     setPendingPosts([]);
     await SecureStore.deleteItemAsync(SESSION_KEY);
+    await googleSignOutNative();
     if (token) signOutRequest(token).catch(() => {});
   }, []);
 

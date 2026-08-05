@@ -1,17 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Platform } from 'react-native';
-import * as AuthSession from 'expo-auth-session';
-import * as WebBrowser from 'expo-web-browser';
+import { useCallback, useState } from 'react';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { GOOGLE_CLIENT_IDS, googleConfigured } from './config';
 import { googleAuth, ApiError } from './api';
-
-WebBrowser.maybeCompleteAuthSession();
-
-function platformGoogleClientId(): string {
-  if (Platform.OS === 'android') return GOOGLE_CLIENT_IDS.android || GOOGLE_CLIENT_IDS.web;
-  if (Platform.OS === 'ios') return GOOGLE_CLIENT_IDS.ios || GOOGLE_CLIENT_IDS.web;
-  return GOOGLE_CLIENT_IDS.web;
-}
 
 export interface AuthedSession {
   token: string;
@@ -19,57 +9,71 @@ export interface AuthedSession {
 }
 
 /**
- * Authorization Code + PKCE, no client secret shipped in the binary (usePKCE defaults
- * to true; we set it explicitly). The client never sees or trusts the ID token itself —
- * it's forwarded to the server, which is the only place identity is decided.
+ * Native Google Sign-In rather than an in-browser OAuth redirect.
+ *
+ * Google no longer accepts custom URI scheme redirects on Android, which is what a
+ * browser-based expo-auth-session flow depends on — so the native SDK is the only
+ * workable path. It hands back an ID token directly, no PKCE code exchange and no
+ * client secret in the binary.
+ *
+ * Note `webClientId` is what makes Android return an ID token at all; the Android
+ * OAuth client is still required in Google Cloud Console (it's matched by package
+ * name + SHA-1 behind the scenes) but is never named here.
  */
+let configured = false;
+
+function ensureConfigured(): void {
+  if (configured) return;
+  GoogleSignin.configure({
+    webClientId: GOOGLE_CLIENT_IDS.web || undefined,
+    iosClientId: GOOGLE_CLIENT_IDS.ios || undefined,
+    scopes: ['email'],
+  });
+  configured = true;
+}
+
 export function useGoogleSignIn(onSuccess: (session: AuthedSession) => void, onError: (message: string) => void) {
-  const discovery = AuthSession.useAutoDiscovery('https://accounts.google.com');
-  const clientId = platformGoogleClientId();
-  const redirectUri = useMemo(() => AuthSession.makeRedirectUri({ scheme: 'introvirght' }), []);
-  const [request, response, promptAsync] = AuthSession.useAuthRequest(
-    {
-      clientId,
-      redirectUri,
-      scopes: ['openid', 'email'],
-      responseType: AuthSession.ResponseType.Code,
-      usePKCE: true,
-    },
-    discovery
-  );
   const [exchanging, setExchanging] = useState(false);
 
-  useEffect(() => {
-    if (!response || !discovery || !request) return;
-    if (response.type === 'success') {
-      setExchanging(true);
-      AuthSession.exchangeCodeAsync(
-        {
-          clientId,
-          code: response.params.code,
-          redirectUri,
-          extraParams: { code_verifier: request.codeVerifier ?? '' },
-        },
-        discovery
-      )
-        .then((tokenResponse) => {
-          if (!tokenResponse.idToken) throw new Error('Google did not return an ID token');
-          return googleAuth(tokenResponse.idToken);
-        })
-        .then(onSuccess)
-        .catch((err) => onError(err instanceof ApiError ? err.message : 'Google sign-in failed'))
-        .finally(() => setExchanging(false));
-    } else if (response.type === 'error') {
-      onError(response.error?.message ?? 'Google sign-in was cancelled');
+  const signIn = useCallback(async () => {
+    if (!googleConfigured) {
+      onError('Google sign-in is not configured on this build.');
+      return;
     }
-    // response identity change is the only thing that should re-trigger this exchange
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [response]);
+    setExchanging(true);
+    try {
+      ensureConfigured();
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      const response = await GoogleSignin.signIn();
+      if (response.type === 'cancelled') return;
+
+      const idToken = response.data.idToken;
+      if (!idToken) throw new Error('Google returned no ID token — check that webClientId is set.');
+
+      // The client never decides who you are; the server verifies this token against
+      // Google's JWKS and is the only thing that issues a session.
+      const session = await googleAuth(idToken);
+      onSuccess(session);
+    } catch (err) {
+      onError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Google sign-in failed');
+    } finally {
+      setExchanging(false);
+    }
+  }, [onSuccess, onError]);
 
   return {
-    ready: Boolean(request) && googleConfigured,
+    ready: googleConfigured,
     configured: googleConfigured,
     exchanging,
-    signIn: () => promptAsync(),
+    signIn,
   };
+}
+
+/** Clears the native session so the account chooser appears again on next sign-in. */
+export async function googleSignOutNative(): Promise<void> {
+  try {
+    await GoogleSignin.signOut();
+  } catch {
+    // best-effort; our own session token is cleared regardless
+  }
 }
