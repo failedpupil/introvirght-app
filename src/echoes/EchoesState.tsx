@@ -57,9 +57,14 @@ export function EchoesProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      const token = await SecureStore.getItemAsync(SESSION_KEY);
-      setSession(token);
-      setReady(true);
+      try {
+        const token = await SecureStore.getItemAsync(SESSION_KEY);
+        setSession(token);
+      } catch {
+        // treat as signed-out rather than leaving `ready` stuck
+      } finally {
+        setReady(true);
+      }
     })();
   }, []);
 

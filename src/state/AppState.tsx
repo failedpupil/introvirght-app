@@ -94,11 +94,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      const [state, pc, peopleList] = await Promise.all([loadState(), checkHasPasscode(), listPeople()]);
-      setData(state);
-      setHasPasscode(pc);
-      setPeople(peopleList);
-      setReady(true);
+      // A transient storage hiccup here (SQLite/SecureStore access right after Android
+      // kills and restarts a backgrounded process is the likeliest time to see one) must
+      // never leave `ready` stuck at false — that freezes the app on the splash screen
+      // forever, which reads to the user as a blank white screen with no way out.
+      try {
+        const [state, pc, peopleList] = await Promise.all([loadState(), checkHasPasscode(), listPeople()]);
+        setData(state);
+        setHasPasscode(pc);
+        setPeople(peopleList);
+      } catch {
+        // fall back to safe defaults rather than hang; the lock screen re-checks
+        // passcode/state normally once the user is back in the app
+      } finally {
+        setReady(true);
+      }
     })();
   }, []);
 

@@ -9,18 +9,26 @@ let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
 function getDb(): Promise<SQLite.SQLiteDatabase> {
   if (!dbPromise) {
-    dbPromise = SQLite.openDatabaseAsync(DB_NAME).then(async (db) => {
-      await db.execAsync(
-        'CREATE TABLE IF NOT EXISTS vault (id INTEGER PRIMARY KEY NOT NULL, ct TEXT NOT NULL, iv TEXT NOT NULL, updated_at TEXT NOT NULL);'
-      );
-      // The sealed-plane blob table (per the backend doc): one encrypted row per object.
-      // Only structural metadata is plaintext — kind, id, timestamps. Never a name, relation,
-      // closeness or energy column: that would be a social graph sitting in the database.
-      await db.execAsync(
-        'CREATE TABLE IF NOT EXISTS blobs (id TEXT PRIMARY KEY NOT NULL, kind TEXT NOT NULL, ct TEXT NOT NULL, iv TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT);'
-      );
-      return db;
-    });
+    dbPromise = SQLite.openDatabaseAsync(DB_NAME)
+      .then(async (db) => {
+        await db.execAsync(
+          'CREATE TABLE IF NOT EXISTS vault (id INTEGER PRIMARY KEY NOT NULL, ct TEXT NOT NULL, iv TEXT NOT NULL, updated_at TEXT NOT NULL);'
+        );
+        // The sealed-plane blob table (per the backend doc): one encrypted row per object.
+        // Only structural metadata is plaintext — kind, id, timestamps. Never a name, relation,
+        // closeness or energy column: that would be a social graph sitting in the database.
+        await db.execAsync(
+          'CREATE TABLE IF NOT EXISTS blobs (id TEXT PRIMARY KEY NOT NULL, kind TEXT NOT NULL, ct TEXT NOT NULL, iv TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT);'
+        );
+        return db;
+      })
+      .catch((err) => {
+        // Never cache a failed open — a transient lock right after Android kills and
+        // restarts a backgrounded process would otherwise poison every DB call for the
+        // rest of the app's lifetime instead of just this one.
+        dbPromise = null;
+        throw err;
+      });
   }
   return dbPromise;
 }
