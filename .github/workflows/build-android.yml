@@ -26,6 +26,13 @@ jobs:
       - name: Prebuild native Android project
         run: npx expo prebuild --platform android --non-interactive
 
+      - name: Embed the JS bundle in the debug variant
+        # Expo's default Gradle config skips bundling JS/assets for debuggableVariants
+        # (just "debug" by default), since it assumes a debug build always has a live
+        # Metro server to load from. A sideloaded standalone APK never does, so without
+        # this it installs and opens to a permanently blank screen — there's no JS in it.
+        run: sed -i '/^react {/a\    debuggableVariants = []' android/app/build.gradle
+
       - name: Assemble debug APK
         working-directory: android
         run: |
