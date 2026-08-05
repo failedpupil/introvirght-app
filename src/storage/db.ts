@@ -47,7 +47,21 @@ export async function loadState(): Promise<PersistedState> {
   try {
     const json = await decryptText({ ct: row.ct, iv: row.iv });
     const parsed = JSON.parse(json) as Partial<PersistedState>;
-    return { ...defaultPersistedState(), ...parsed };
+    const merged = { ...defaultPersistedState(), ...parsed };
+
+    // The top-level spread doesn't reach into the arrays, so entries and fragments
+    // written by an older version arrive missing fields the current code expects.
+    merged.entries = (merged.entries ?? []).map((e) => ({
+      ...e,
+      people: e.people ?? [],
+      minutesOnPage: e.minutesOnPage ?? 0,
+      foldedFragmentIds: e.foldedFragmentIds ?? [],
+    }));
+    merged.todayFragments = (merged.todayFragments ?? []).map((f, i) => ({
+      ...f,
+      id: f.id ?? `legacy_${i}_${f.at}`,
+    }));
+    return merged;
   } catch {
     return defaultPersistedState();
   }

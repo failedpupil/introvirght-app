@@ -10,12 +10,14 @@ import {
   NudgePref,
   Person,
   PersistedState,
+  PickableMood,
   Plan,
   Rhythm,
   Screen,
   defaultPersistedState,
   emptyPersonFacts,
 } from './types';
+import { MoodKey } from '../theme/colors';
 import { PROMPTS, TemplateId } from '../data/content';
 import { toIso } from '../utils/date';
 import { wordCount, deriveTitle } from '../utils/words';
@@ -68,6 +70,10 @@ interface AppContextShape {
   addFragment: (text: string) => void;
   setDraftText: (t: string) => void;
   setDraftTemplate: (id: TemplateId) => void;
+  setDraftMood: (m: PickableMood | null) => void;
+  beginDraftClock: () => void;
+  tagDraftPerson: (personId: string) => void;
+  foldInFragments: () => void;
   sealEntry: () => void;
   setPlan: (p: Plan) => void;
 
@@ -199,7 +205,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const at = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
       update({
         todayFragmentsIso: todayIso,
-        todayFragments: [...list, { at, text: trimmed }],
+        todayFragments: [...list, { id: `f_${now.getTime()}_${Math.round(Math.random() * 1e6)}`, at, text: trimmed }],
       });
     },
     [update, todayIso]
@@ -207,26 +213,64 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const setDraftText = useCallback((draftText: string) => update({ draftText }), [update]);
   const setDraftTemplate = useCallback((draftTemplate: TemplateId) => update({ draftTemplate }), [update]);
+  const setDraftMood = useCallback((draftMood: PickableMood | null) => update({ draftMood }), [update]);
+
+  /** Marks the page as opened once, so time-on-page survives leaving and coming back. */
+  const beginDraftClock = useCallback(() => {
+    if (latestData.current.draftOpenedAtMs == null) update({ draftOpenedAtMs: Date.now() });
+  }, [update]);
+
+  const tagDraftPerson = useCallback(
+    (personId: string) => {
+      const cur = latestData.current;
+      if (cur.draftPeople.includes(personId)) return;
+      update({ draftPeople: [...cur.draftPeople, personId] });
+    },
+    [update]
+  );
+
+  const foldInFragments = useCallback(() => {
+    const cur = latestData.current;
+    if (cur.todayFragmentsIso !== todayIso) return;
+    const unfolded = cur.todayFragments.filter((f) => !cur.draftFoldedFragmentIds.includes(f.id));
+    if (unfolded.length === 0) return;
+    const block = unfolded.map((f) => `${f.at} — ${f.text}`).join('\n');
+    const existing = cur.draftText.replace(/\s*$/, '');
+    update({
+      draftText: existing ? `${existing}\n\n${block}` : block,
+      draftFoldedFragmentIds: [...cur.draftFoldedFragmentIds, ...unfolded.map((f) => f.id)],
+    });
+  }, [update, todayIso]);
 
   const sealEntry = useCallback(() => {
     const cur = latestData.current;
     const wc = wordCount(cur.draftText);
     if (wc <= 3) return;
-    const mood = classifyMood(cur.draftText);
+    // A mood chosen by hand always beats the on-device guess.
+    const mood: MoodKey = cur.draftMood ?? classifyMood(cur.draftText);
+    const openedAt = cur.draftOpenedAtMs ?? Date.now();
     const entry: DiaryEntry = {
       id: Date.now(),
       iso: todayIso,
       mood,
+      moodPicked: cur.draftMood ?? undefined,
       title: deriveTitle(cur.draftText, cur.draftTemplate),
       body: cur.draftText,
       wordCount: wc,
       template: cur.draftTemplate,
       sealedAtMs: Date.now(),
+      people: cur.draftPeople,
+      minutesOnPage: Math.max(0, Math.round((Date.now() - openedAt) / 60000)),
+      foldedFragmentIds: cur.draftFoldedFragmentIds,
     };
     update({
       entries: [entry, ...cur.entries.filter((e) => e.iso !== todayIso)],
       draftText: '',
       draftTemplate: 'free',
+      draftMood: null,
+      draftPeople: [],
+      draftFoldedFragmentIds: [],
+      draftOpenedAtMs: null,
     });
   }, [update, todayIso]);
 
@@ -328,6 +372,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addFragment,
       setDraftText,
       setDraftTemplate,
+      setDraftMood,
+      beginDraftClock,
+      tagDraftPerson,
+      foldInFragments,
       sealEntry,
       setPlan,
       people,
@@ -361,6 +409,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addFragment,
       setDraftText,
       setDraftTemplate,
+      setDraftMood,
+      beginDraftClock,
+      tagDraftPerson,
+      foldInFragments,
       sealEntry,
       setPlan,
       people,

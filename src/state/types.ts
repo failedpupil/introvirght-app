@@ -6,19 +6,31 @@ export type NudgePref = 'yes' | 'stall' | 'no';
 export type Plan = 'free' | 'quiet';
 
 export interface FragmentEntry {
+  id: string;
   at: string;
   text: string;
 }
 
+/** The five moods offerable by hand on the writing screen. A subset of MoodKey — 'none' is not choosable. */
+export type PickableMood = 'quiet' | 'clear' | 'warm' | 'tender' | 'heavy';
+
 export interface DiaryEntry {
   id: number;
   iso: string; // YYYY-MM-DD, the calendar day this page belongs to
+  /** What Weather reads. The hand-picked mood when there is one, else the on-device guess. */
   mood: MoodKey;
+  /** Set only when the writer chose it themselves, so a guess is never mistaken for a statement. */
+  moodPicked?: PickableMood;
   title: string;
   body: string;
   wordCount: number;
   template: TemplateId;
   sealedAtMs: number;
+  /** Person ids, tagged by hand only — nothing scans the entry for names. */
+  people: string[];
+  /** Recorded at seal. Never shown back as a score. */
+  minutesOnPage: number;
+  foldedFragmentIds: string[];
 }
 
 export type Closeness = 'inner' | 'near' | 'outer';
@@ -75,6 +87,11 @@ export interface PersistedState {
   nudgeIdx: number;
   draftText: string;
   draftTemplate: TemplateId;
+  draftMood: PickableMood | null;
+  draftPeople: string[];
+  draftFoldedFragmentIds: string[];
+  /** When the current draft's page was first opened, so time-on-page survives a restart. */
+  draftOpenedAtMs: number | null;
   todayFragmentsIso: string | null;
   todayFragments: FragmentEntry[];
   entries: DiaryEntry[];
@@ -94,6 +111,10 @@ export function defaultPersistedState(): PersistedState {
     nudgeIdx: 0,
     draftText: '',
     draftTemplate: 'free',
+    draftMood: null,
+    draftPeople: [],
+    draftFoldedFragmentIds: [],
+    draftOpenedAtMs: null,
     todayFragmentsIso: null,
     todayFragments: [],
     entries: [],

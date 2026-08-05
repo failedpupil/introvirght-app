@@ -15,3 +15,6 @@ export const ENERGY_OPTIONS: { id: Energy; label: string }[] = [
 export function closenessOf(id: Closeness) {
   return CLOSENESS_RINGS.find((r) => r.id === id)!;
 }
+
+/** Who is offered when tagging someone into an entry. Outer-ring people are noise there. */
+export const TAGGABLE_RINGS: Closeness[] = ['inner', 'near'];

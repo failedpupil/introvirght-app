@@ -32,6 +32,15 @@ export const TEMPLATES: TemplateDef[] = [
   { id: 'recap', label: 'What happened', name: 'What happened', ph: 'Just the facts of the day.', scaffold: 'Morning —\n\nAfternoon —\n\nEvening —\n' },
 ];
 
+/** The five moods a writer can set by hand on the writing screen, in display order. */
+export const PICKABLE_MOODS: { id: 'quiet' | 'clear' | 'warm' | 'tender' | 'heavy'; label: string }[] = [
+  { id: 'quiet', label: 'Quiet' },
+  { id: 'clear', label: 'Clear' },
+  { id: 'warm', label: 'Warm' },
+  { id: 'tender', label: 'Tender' },
+  { id: 'heavy', label: 'Heavy' },
+];
+
 export type FeelId = 'quiet' | 'heavy' | 'tender' | 'restless' | 'relieved' | 'tired';
 
 export interface FeelDef {
