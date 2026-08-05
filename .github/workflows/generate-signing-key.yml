@@ -1,0 +1,38 @@
+# One-shot helper. Gradle invents a fresh random debug keystore whenever one is
+# missing, so every CI run would sign with a different certificate — and Google
+# validates the signing certificate for Android OAuth clients, so sign-in would
+# break on every new build. This generates ONE keystore to commit to the repo so
+# the SHA-1 stays fixed and only has to be registered with Google once.
+#
+# The password here is Android's universal debug-keystore convention, not a secret.
+# This keystore is for debug/testing builds only — never use it to sign a release.
+name: Generate signing key
+
+on:
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Generate keystore
+        run: |
+          keytool -genkeypair -v \
+            -keystore ci-debug.keystore \
+            -storepass android -keypass android \
+            -alias androiddebugkey \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: Print SHA-1 (register this with Google Cloud Console)
+        run: keytool -list -v -keystore ci-debug.keystore -storepass android -alias androiddebugkey
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ci-debug-keystore
+          path: ci-debug.keystore
