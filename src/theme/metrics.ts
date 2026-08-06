@@ -32,3 +32,39 @@ export const buttonLabel = {
   letterSpacing: 1.6, // .14-.16em
   textTransform: 'uppercase' as const,
 };
+
+/**
+ * The φ system — home screen only (HOME_SCREEN_ADDENDUM.md §2). Deliberately not
+ * folded into `spacing`/the rest of the app yet: the addendum has the home screen
+ * ship on this first so it can be judged in place before rolling 21px gutters out
+ * everywhere. Values are derived, not rounded to convenient numbers.
+ */
+export const PHI = 1.618;
+
+/** Fibonacci spacing — replaces the ad-hoc 22/26/28/30 set, home screen only. */
+export const phiSpace = {
+  gutter: 21,
+  top: 55,
+  section: 34,
+  gap: 13,
+  tight: 8,
+} as const;
+
+/** Card width is the screen minus both gutters; heights are the golden section of the
+ * block above — computed, then rounded to the pixel a screen can actually render (the
+ * addendum's own 222/137 are that same rounding of 222.497.../137.207..., not picked). */
+export const CARD_WIDTH = 402 - phiSpace.gutter * 2; // 360
+export const HERO_HEIGHT = Math.round(CARD_WIDTH / PHI); // 222
+export const SURFACED_HEIGHT = Math.round(HERO_HEIGHT / PHI); // 137
+
+/** Type scale on √φ (1.272) — coarser full-φ steps don't fit a phone. */
+export const phiType = {
+  label: 9.5,
+  label2: 10.5,
+  small: 13,
+  fragment: 17,
+  surfacedBody: 19,
+  counter: 21,
+  heroBody: 27,
+  heroDate: 44,
+} as const;

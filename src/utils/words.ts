@@ -3,6 +3,13 @@ export function wordCount(text: string): number {
   return t ? t.split(/\s+/).length : 0;
 }
 
+/** The tail of an open draft, for the hero's "You left this open" quote. The ellipsis
+ * trails, not leads — it marks the sentence as unfinished, not the quote as truncated. */
+export function lastWords(text: string, n: number): string {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  return `${words.slice(-n).join(' ')}…`;
+}
+
 export function excerpt(body: string, max = 140): string {
   const flat = body.replace(/\s+/g, ' ').trim();
   return flat.length > max ? flat.slice(0, max).trim() + '…' : flat;

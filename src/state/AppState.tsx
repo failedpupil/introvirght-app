@@ -28,6 +28,7 @@ interface NavEntry {
   screen: Screen;
   entryId?: number;
   personId?: string;
+  searchQuery?: string;
 }
 
 export interface NewPersonInput {
@@ -49,7 +50,8 @@ interface AppContextShape {
   screen: Screen;
   openEntryId: number | null;
   openPersonId: string | null;
-  navigate: (screen: Screen, opts?: { entryId?: number; personId?: string; replace?: boolean }) => void;
+  openSearchQuery: string | null;
+  navigate: (screen: Screen, opts?: { entryId?: number; personId?: string; searchQuery?: string; replace?: boolean }) => void;
   goBack: () => void;
   reset: (screen: Screen) => void;
   goEntries: () => void;
@@ -141,10 +143,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const screen = screenEntry.screen;
   const openEntryId = screenEntry.entryId ?? null;
   const openPersonId = screenEntry.personId ?? null;
+  const openSearchQuery = screenEntry.searchQuery ?? null;
 
-  const navigate = useCallback((next: Screen, opts?: { entryId?: number; personId?: string; replace?: boolean }) => {
+  const navigate = useCallback((next: Screen, opts?: { entryId?: number; personId?: string; searchQuery?: string; replace?: boolean }) => {
     setNav((prev) => {
-      const entry: NavEntry = { screen: next, entryId: opts?.entryId, personId: opts?.personId };
+      const entry: NavEntry = { screen: next, entryId: opts?.entryId, personId: opts?.personId, searchQuery: opts?.searchQuery };
       if (opts?.replace) return [...prev.slice(0, -1), entry];
       return [...prev, entry];
     });
@@ -203,9 +206,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const list: FragmentEntry[] = sameDay ? cur.todayFragments : [];
       const now = new Date();
       const at = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const id = `f_${now.getTime()}_${Math.round(Math.random() * 1e6)}`;
       update({
         todayFragmentsIso: todayIso,
-        todayFragments: [...list, { id: `f_${now.getTime()}_${Math.round(Math.random() * 1e6)}`, at, text: trimmed }],
+        todayFragments: [...list, { id, at, text: trimmed }],
+        fragmentArchive: [...cur.fragmentArchive, { id, at, text: trimmed, dateIso: todayIso }],
       });
     },
     [update, todayIso]
@@ -354,6 +359,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       screen,
       openEntryId,
       openPersonId,
+      openSearchQuery,
       navigate,
       goBack,
       reset,
@@ -392,6 +398,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       screen,
       openEntryId,
       openPersonId,
+      openSearchQuery,
       navigate,
       goBack,
       reset,

@@ -11,6 +11,13 @@ export interface FragmentEntry {
   text: string;
 }
 
+/** Every fragment ever captured, independent of the day it belongs to — `todayFragments`
+ * only ever holds the current day's, so Surfaced's "loose fragment" variant (which looks
+ * back 7+ days) needs its own durable record of what was written and never folded in. */
+export interface ArchivedFragment extends FragmentEntry {
+  dateIso: string;
+}
+
 /** The five moods offerable by hand on the writing screen. A subset of MoodKey — 'none' is not choosable. */
 export type PickableMood = 'quiet' | 'clear' | 'warm' | 'tender' | 'heavy';
 
@@ -94,6 +101,7 @@ export interface PersistedState {
   draftOpenedAtMs: number | null;
   todayFragmentsIso: string | null;
   todayFragments: FragmentEntry[];
+  fragmentArchive: ArchivedFragment[];
   entries: DiaryEntry[];
   plan: Plan;
 }
@@ -117,6 +125,7 @@ export function defaultPersistedState(): PersistedState {
     draftOpenedAtMs: null,
     todayFragmentsIso: null,
     todayFragments: [],
+    fragmentArchive: [],
     entries: [],
     plan: 'free',
   };

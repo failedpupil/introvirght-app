@@ -8,8 +8,8 @@ import { useApp } from '../state/AppState';
 import { fullDate, isoToDate, toIso } from '../utils/date';
 
 export function SearchScreen() {
-  const { data, goEntries, navigate } = useApp();
-  const [q, setQ] = useState('');
+  const { data, goEntries, navigate, openSearchQuery } = useApp();
+  const [q, setQ] = useState(openSearchQuery ?? '');
   const [recents, setRecents] = useState<string[]>([]);
 
   const results = useMemo(() => {

@@ -17,14 +17,21 @@ export interface WeeklyLetter {
   questions: [string, string];
 }
 
+/** The trailing 7-day window a weekly letter (or its Surfaced teaser) draws from. */
+export function trailingWeek(allEntries: DiaryEntry[], now = new Date()): DiaryEntry[] {
+  const weekAgo = new Date(now);
+  weekAgo.setDate(weekAgo.getDate() - 6);
+  return allEntries.filter((e) => {
+    const d = isoToDate(e.iso);
+    return d >= new Date(weekAgo.getFullYear(), weekAgo.getMonth(), weekAgo.getDate()) && d <= now;
+  });
+}
+
 export function computeWeeklyLetter(allEntries: DiaryEntry[]): WeeklyLetter {
   const now = new Date();
   const weekAgo = new Date(now);
   weekAgo.setDate(weekAgo.getDate() - 6);
-  const week = allEntries.filter((e) => {
-    const d = isoToDate(e.iso);
-    return d >= new Date(weekAgo.getFullYear(), weekAgo.getMonth(), weekAgo.getDate()) && d <= now;
-  });
+  const week = trailingWeek(allEntries, now);
 
   const rangeLabel = `${weekdayName(weekAgo)}, ${fullDate(weekAgo).split(', ')[1]} — ${fullDate(now).split(', ')[1]}`;
 
