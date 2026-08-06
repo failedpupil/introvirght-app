@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   Animated,
   KeyboardAvoidingView,
   NativeSyntheticEvent,
@@ -12,8 +13,8 @@ import {
   TextInputContentSizeChangeEventData,
   View,
 } from 'react-native';
-import { colors, diaryMood, energyColor } from '../theme/colors';
-import { serif, sans } from '../theme/fonts';
+import { sans } from '../theme/fonts';
+import { useTheme } from '../theme/ThemeState';
 import { Kicker } from '../components/Basics';
 import { TabPeopleIcon } from '../icons/Icons';
 import { useApp } from '../state/AppState';
@@ -23,8 +24,6 @@ import { PickableMood } from '../state/types';
 import { wordCount } from '../utils/words';
 import { niceDate } from '../utils/date';
 
-/** Exact — the ruled lines are drawn from this, so text drifts off the rules if it changes. */
-const LINE_HEIGHT = 33.6;
 const MIN_BODY_HEIGHT = 196;
 
 function timeOnPageLabel(openedAtMs: number | null, nowMs: number): string {
@@ -51,6 +50,12 @@ export function WriteScreen() {
     goBack,
     navigate,
   } = useApp();
+  const { colors, diaryMood, energyColor, readingFont, readingSize, ruled, askBeforeSealing } = useTheme();
+
+  // Exact — the ruled lines are drawn from this, so text drifts off the rules if it
+  // changes. Follows the chosen reading size per APPEARANCE_BILLING_ADDENDUM.md §1.
+  const lineHeight = Math.round(readingSize.px * readingSize.lh);
+  const styles = useMemo(() => makeStyles(colors, readingFont, readingSize, lineHeight), [colors, readingFont, readingSize, lineHeight]);
 
   const [nudgeVisible, setNudgeVisible] = useState(false);
   const [bodyHeight, setBodyHeight] = useState(MIN_BODY_HEIGHT);
@@ -158,14 +163,24 @@ export function WriteScreen() {
       : [];
 
   const canSeal = wc > 3;
-  const seal = () => {
-    if (!canSeal) return;
+  const doSeal = () => {
     if (idleTimer.current) clearTimeout(idleTimer.current);
     sealEntry();
     navigate('sealed', { replace: true });
   };
+  const seal = () => {
+    if (!canSeal) return;
+    if (askBeforeSealing) {
+      Alert.alert('Seal today’s page?', 'One confirmation, so a day is never closed by accident.', [
+        { text: 'Not yet', style: 'cancel' },
+        { text: 'Seal it', onPress: doSeal },
+      ]);
+    } else {
+      doSeal();
+    }
+  };
 
-  const ruleCount = Math.ceil(bodyHeight / LINE_HEIGHT) + 1;
+  const ruleCount = ruled ? Math.ceil(bodyHeight / lineHeight) + 1 : 0;
   const moodLabel = data.draftMood
     ? PICKABLE_MOODS.find((m) => m.id === data.draftMood)!.label
     : 'Optional';
@@ -212,13 +227,16 @@ export function WriteScreen() {
           <Text style={styles.timeOnPage}>{timeOnPageLabel(data.draftOpenedAtMs, nowMs)}</Text>
         </View>
 
-        {/* Ruled paper: 1px lines behind a transparent input, scrolling with the content. */}
+        {/* Ruled paper: 1px lines behind a transparent input, scrolling with the content.
+            Only drawn when the Ruled toggle is on — "Faint lines behind what you write." */}
         <View style={{ marginTop: 14 }}>
-          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { height: bodyHeight }]}>
-            {Array.from({ length: ruleCount }).map((_, i) => (
-              <View key={i} style={[styles.rule, { top: LINE_HEIGHT * (i + 1) - 1 }]} />
-            ))}
-          </View>
+          {ruled && (
+            <View pointerEvents="none" style={[StyleSheet.absoluteFill, { height: bodyHeight }]}>
+              {Array.from({ length: ruleCount }).map((_, i) => (
+                <View key={i} style={[styles.rule, { top: lineHeight * (i + 1) - 1 }]} />
+              ))}
+            </View>
+          )}
           <TextInput
             value={data.draftText}
             onChangeText={onChangeText}
@@ -331,54 +349,64 @@ export function WriteScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.paper, paddingTop: 58 },
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 22, paddingVertical: 6, paddingBottom: 12 },
-  topLabel: { fontFamily: sans(400), fontSize: 10.5, letterSpacing: 1.5, textTransform: 'uppercase', color: colors.faint },
-  draftState: { fontFamily: sans(400), fontSize: 9.5, letterSpacing: 1.5, textTransform: 'uppercase', color: colors.faint2 },
-  tplRow: { flexGrow: 0, borderBottomWidth: 1, borderBottomColor: colors.hair2, paddingBottom: 12 },
-  tplBtn: { paddingTop: 2, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: 'transparent' },
-  tplLabel: { fontFamily: sans(400), fontSize: 10, letterSpacing: 1.3, textTransform: 'uppercase' },
+function makeStyles(
+  colors: ReturnType<typeof useTheme>['colors'],
+  readingFont: ReturnType<typeof useTheme>['readingFont'],
+  readingSize: ReturnType<typeof useTheme>['readingSize'],
+  lineHeight: number
+) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.paper, paddingTop: 58 },
+    topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 22, paddingVertical: 6, paddingBottom: 12 },
+    topLabel: { fontFamily: sans(400), fontSize: 10.5, letterSpacing: 1.5, textTransform: 'uppercase', color: colors.faint },
+    draftState: { fontFamily: sans(400), fontSize: 9.5, letterSpacing: 1.5, textTransform: 'uppercase', color: colors.faint2 },
+    tplRow: { flexGrow: 0, borderBottomWidth: 1, borderBottomColor: colors.hair2, paddingBottom: 12 },
+    tplBtn: { paddingTop: 2, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: 'transparent' },
+    tplLabel: { fontFamily: sans(400), fontSize: 10, letterSpacing: 1.3, textTransform: 'uppercase' },
 
-  body: { flex: 1 },
-  bodyHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 },
-  timeOnPage: { fontFamily: sans(400), fontSize: 9.5, letterSpacing: 0.4, color: '#D3CCC1' },
-  rule: { position: 'absolute', left: 0, right: 0, height: 1, backgroundColor: colors.echoHair },
-  textarea: {
-    fontFamily: serif(300),
-    fontSize: 20,
-    lineHeight: LINE_HEIGHT,
-    letterSpacing: -0.06,
-    color: colors.ink2,
-    padding: 0,
-    backgroundColor: 'transparent',
-  },
+    body: { flex: 1 },
+    bodyHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 },
+    timeOnPage: { fontFamily: sans(400), fontSize: 9.5, letterSpacing: 0.4, color: colors.faint },
+    rule: { position: 'absolute', left: 0, right: 0, height: 1, backgroundColor: colors.echoHair },
+    // The write textarea: the other surface named explicitly in the addendum. Font, size
+    // and line-height all follow Hand/reading-size; the ruled lines above key off the
+    // same `lineHeight` so text can never drift off them.
+    textarea: {
+      fontFamily: readingFont(300),
+      fontSize: readingSize.px,
+      lineHeight,
+      letterSpacing: -0.06,
+      color: colors.ink2,
+      padding: 0,
+      backgroundColor: 'transparent',
+    },
 
-  foldRow: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.paperSunk, paddingVertical: 13, paddingHorizontal: 16, marginTop: 20 },
-  foldPlus: { fontFamily: serif(300), fontSize: 15, color: colors.muted },
-  foldLabel: { flex: 1, fontFamily: serif(300), fontSize: 16.5, color: colors.ink3 },
-  foldAction: { fontFamily: sans(400), fontSize: 9.5, letterSpacing: 1.2, textTransform: 'uppercase', color: colors.muted },
+    foldRow: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.paperSunk, paddingVertical: 13, paddingHorizontal: 16, marginTop: 20 },
+    foldPlus: { fontFamily: readingFont(300), fontSize: 15, color: colors.muted },
+    foldLabel: { flex: 1, fontFamily: readingFont(300), fontSize: 16.5, color: colors.ink3 },
+    foldAction: { fontFamily: sans(400), fontSize: 9.5, letterSpacing: 1.2, textTransform: 'uppercase', color: colors.muted },
 
-  nudge: { marginTop: 18, padding: 18, paddingHorizontal: 20, backgroundColor: colors.paperSunk },
-  nudgeText: { fontFamily: serif(300), fontStyle: 'italic', fontSize: 19, lineHeight: 28, color: colors.ink3, marginTop: 10 },
-  nudgeAction: { fontFamily: sans(400), fontSize: 10, letterSpacing: 1.4, textTransform: 'uppercase', color: colors.ink },
+    nudge: { marginTop: 18, padding: 18, paddingHorizontal: 20, backgroundColor: colors.paperSunk },
+    nudgeText: { fontFamily: readingFont(300), fontStyle: 'italic', fontSize: 19, lineHeight: 28, color: colors.ink3, marginTop: 10 },
+    nudgeAction: { fontFamily: sans(400), fontSize: 10, letterSpacing: 1.4, textTransform: 'uppercase', color: colors.ink },
 
-  chipRow: { flexGrow: 0, borderTopWidth: 1, borderTopColor: colors.hair2 },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: colors.dotRing, borderRadius: 2, paddingVertical: 9, paddingHorizontal: 14 },
-  chipDot: { width: 5, height: 5, borderRadius: 2.5 },
-  chipName: { fontFamily: serif(300), fontSize: 16, color: colors.ink2 },
+    chipRow: { flexGrow: 0, borderTopWidth: 1, borderTopColor: colors.hair2 },
+    chip: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: colors.dotRing, borderRadius: 2, paddingVertical: 9, paddingHorizontal: 14 },
+    chipDot: { width: 5, height: 5, borderRadius: 2.5 },
+    chipName: { fontFamily: readingFont(300), fontSize: 16, color: colors.ink2 },
 
-  footer: { borderTopWidth: 1, borderTopColor: colors.hair2, backgroundColor: colors.paper, paddingHorizontal: 22, paddingTop: 14, paddingBottom: 18, gap: 14 },
-  moodRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  moodKicker: { fontFamily: sans(400), fontSize: 9, letterSpacing: 1.44, textTransform: 'uppercase', color: colors.faint },
-  moodDots: { flexDirection: 'row', gap: 8 },
-  moodBtn: { width: 20, height: 20, borderRadius: 10, borderWidth: 1, borderColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
-  moodDot: { width: 9, height: 9, borderRadius: 4.5 },
-  moodLabel: { flex: 1, textAlign: 'right', fontFamily: sans(400), fontSize: 9.5, letterSpacing: 0.4, color: colors.faint2 },
+    footer: { borderTopWidth: 1, borderTopColor: colors.hair2, backgroundColor: colors.paper, paddingHorizontal: 22, paddingTop: 14, paddingBottom: 18, gap: 14 },
+    moodRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    moodKicker: { fontFamily: sans(400), fontSize: 9, letterSpacing: 1.44, textTransform: 'uppercase', color: colors.faint },
+    moodDots: { flexDirection: 'row', gap: 8 },
+    moodBtn: { width: 20, height: 20, borderRadius: 10, borderWidth: 1, borderColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
+    moodDot: { width: 9, height: 9, borderRadius: 4.5 },
+    moodLabel: { flex: 1, textAlign: 'right', fontFamily: sans(400), fontSize: 9.5, letterSpacing: 0.4, color: colors.faint2 },
 
-  actionRow: { flexDirection: 'row', alignItems: 'center', gap: 18 },
-  action: { flexDirection: 'row', alignItems: 'center', gap: 7, flexShrink: 1 },
-  actionLabel: { fontFamily: sans(400), fontSize: 9.5, letterSpacing: 1, textTransform: 'uppercase', color: colors.muted, flexShrink: 1 },
-  askGlyph: { fontFamily: serif(300), fontSize: 15, color: colors.muted, width: 15, textAlign: 'center' },
-  footerWords: { fontFamily: sans(400), fontSize: 9.5, letterSpacing: 0.4, color: colors.faint2 },
-});
+    actionRow: { flexDirection: 'row', alignItems: 'center', gap: 18 },
+    action: { flexDirection: 'row', alignItems: 'center', gap: 7, flexShrink: 1 },
+    actionLabel: { fontFamily: sans(400), fontSize: 9.5, letterSpacing: 1, textTransform: 'uppercase', color: colors.muted, flexShrink: 1 },
+    askGlyph: { fontFamily: readingFont(300), fontSize: 15, color: colors.muted, width: 15, textAlign: 'center' },
+    footerWords: { fontFamily: sans(400), fontSize: 9.5, letterSpacing: 0.4, color: colors.faint2 },
+  });
+}

@@ -61,3 +61,13 @@ export const avatarRing = {
   inner: '#CFC8BC',
   outer: '#E4E0D6',
 } as const;
+
+/**
+ * Widened (string, not literal-hex) shapes for the Appearance theme system — each paper
+ * defines its own hex values for the same key set, so the type can't pin Ivory's literals.
+ */
+export type ColorsShape = { [K in keyof typeof colors]: string };
+export type DiaryMoodShape = { [K in keyof typeof diaryMood]: string };
+export type FeelColorShape = { [K in keyof typeof feelColor]: string };
+export type EnergyColorShape = { [K in keyof typeof energyColor]: string };
+export type AvatarRingShape = { [K in keyof typeof avatarRing]: string };

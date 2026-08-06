@@ -1,13 +1,13 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, TextStyle, View, ViewStyle, PressableStateCallbackType } from 'react-native';
-import { colors } from '../theme/colors';
-import { serif, sans } from '../theme/fonts';
+import { sans, serif } from '../theme/fonts';
+import { useTheme } from '../theme/ThemeState';
 import { ChevronLeft } from '../icons/Icons';
 
 /** A structural micro-label: Instrument Sans, uppercase, tracked. */
 export function Kicker({
   children,
-  color = colors.faint,
+  color,
   size = 9.5,
   tracking = 1.7,
   style,
@@ -18,6 +18,7 @@ export function Kicker({
   tracking?: number;
   style?: TextStyle;
 }) {
+  const { colors } = useTheme();
   return (
     <Text
       style={[
@@ -26,7 +27,7 @@ export function Kicker({
           fontSize: size,
           letterSpacing: tracking,
           textTransform: 'uppercase',
-          color,
+          color: color ?? colors.faint,
         },
         style,
       ]}
@@ -36,15 +37,9 @@ export function Kicker({
   );
 }
 
-export function Hairline({ style, color = colors.hair }: { style?: ViewStyle; color?: string }) {
-  return <View style={[{ height: 1, backgroundColor: color }, style]} />;
-}
-
-type PressStyle = ViewStyle | ((state: PressableStateCallbackType) => ViewStyle);
-
-function resolve(style: PressStyle | undefined, state: PressableStateCallbackType): ViewStyle | undefined {
-  if (!style) return undefined;
-  return typeof style === 'function' ? style(state) : style;
+export function Hairline({ style, color }: { style?: ViewStyle; color?: string }) {
+  const { colors } = useTheme();
+  return <View style={[{ height: 1, backgroundColor: color ?? colors.hair }, style]} />;
 }
 
 export function PrimaryButton({
@@ -58,6 +53,7 @@ export function PrimaryButton({
   style?: ViewStyle;
   disabled?: boolean;
 }) {
+  const { colors } = useTheme();
   return (
     <Pressable
       onPress={onPress}
@@ -68,7 +64,7 @@ export function PrimaryButton({
         style,
       ]}
     >
-      <Text style={styles.primaryLabel}>{label}</Text>
+      <Text style={[styles.primaryLabel, { color: colors.paper }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -84,6 +80,7 @@ export function BorderedButton({
   style?: ViewStyle;
   padding?: number;
 }) {
+  const { colors } = useTheme();
   return (
     <Pressable
       onPress={onPress}
@@ -103,8 +100,8 @@ export function BorderedButton({
 export function TextButton({
   label,
   onPress,
-  color = colors.faint,
-  hoverColor = colors.ink,
+  color,
+  hoverColor,
   style,
   icon,
 }: {
@@ -115,12 +112,15 @@ export function TextButton({
   style?: ViewStyle;
   icon?: React.ReactNode;
 }) {
+  const { colors } = useTheme();
+  const base = color ?? colors.faint;
+  const hover = hoverColor ?? colors.ink;
   return (
     <Pressable onPress={onPress} style={[styles.textButtonRow, style]}>
       {({ pressed }) => (
         <>
           {icon}
-          <Text style={[styles.textButtonLabel, { color: pressed ? hoverColor : color }]}>{label}</Text>
+          <Text style={[styles.textButtonLabel, { color: pressed ? hover : base }]}>{label}</Text>
         </>
       )}
     </Pressable>
@@ -128,6 +128,7 @@ export function TextButton({
 }
 
 export function BackLink({ label = 'Back', onPress }: { label?: string; onPress: () => void }) {
+  const { colors } = useTheme();
   return (
     <Pressable onPress={onPress} style={styles.backRow} hitSlop={8}>
       {({ pressed }) => (
@@ -141,7 +142,8 @@ export function BackLink({ label = 'Back', onPress }: { label?: string; onPress:
 }
 
 export function ScreenTitle({ children, style }: { children: React.ReactNode; style?: TextStyle }) {
-  return <Text style={[{ fontFamily: serif(400), fontSize: 34, letterSpacing: -0.7, color: colors.ink }, style]}>{children}</Text>;
+  const { colors } = useTheme();
+  return <Text style={[styles.screenTitle, { color: colors.ink }, style]}>{children}</Text>;
 }
 
 const styles = StyleSheet.create({
@@ -157,7 +159,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 1.7,
     textTransform: 'uppercase',
-    color: colors.paper,
   },
   bordered: {
     width: '100%',
@@ -192,9 +193,9 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     alignSelf: 'flex-start',
   },
-  chevron: {
-    fontSize: 16,
+  screenTitle: {
     fontFamily: serif(400),
-    marginTop: -2,
+    fontSize: 34,
+    letterSpacing: -0.7,
   },
 });

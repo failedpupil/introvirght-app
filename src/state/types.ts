@@ -154,9 +154,12 @@ export type Screen =
   | 'signin'
   | 'you'
   | 'privacy'
-  | 'paywall';
+  | 'paywall'
+  | 'appearance'
+  | 'checkout'
+  | 'purchased';
 
 export const TABBED_SCREENS: Screen[] = [
   'today', 'entries', 'entry', 'echoes', 'you', 'search', 'empty', 'review', 'privacy', 'paywall',
-  'people', 'person', 'peopleEmpty',
+  'people', 'person', 'peopleEmpty', 'appearance', 'checkout', 'purchased',
 ];

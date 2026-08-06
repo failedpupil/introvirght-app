@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { colors } from '../theme/colors';
 import { serif, sans } from '../theme/fonts';
+import { useTheme } from '../theme/ThemeState';
 import { Kicker } from '../components/Basics';
 import { EntryRow } from '../components/EntryRow';
 import { useApp } from '../state/AppState';
@@ -9,6 +9,8 @@ import { fullDate, isoToDate, toIso } from '../utils/date';
 
 export function SearchScreen() {
   const { data, goEntries, navigate, openSearchQuery } = useApp();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [q, setQ] = useState(openSearchQuery ?? '');
   const [recents, setRecents] = useState<string[]>([]);
 
@@ -78,15 +80,17 @@ export function SearchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.paper, paddingTop: 66 },
-  inputRow: { flexDirection: 'row', alignItems: 'center', gap: 14, borderBottomWidth: 1, borderBottomColor: colors.ink, paddingBottom: 12 },
-  input: { flex: 1, fontFamily: serif(300), fontSize: 22, color: colors.ink },
-  done: { fontFamily: sans(400), fontSize: 10.5, letterSpacing: 1.5, textTransform: 'uppercase', color: colors.faint },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 18 },
-  chip: { paddingVertical: 8, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.hair },
-  chipLabel: { fontFamily: sans(400), fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', color: colors.muted },
-  oneYear: { paddingHorizontal: 26, paddingTop: 30, marginTop: 8, borderTopWidth: 1, borderTopColor: colors.hair2 },
-  quote: { fontFamily: serif(300), fontStyle: 'italic', fontSize: 19, lineHeight: 29, color: colors.ink3, marginTop: 14 },
-  quoteMeta: { fontFamily: sans(400), fontSize: 9.5, letterSpacing: 0.3, color: colors.faint2, marginTop: 12 },
-});
+function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.paper, paddingTop: 66 },
+    inputRow: { flexDirection: 'row', alignItems: 'center', gap: 14, borderBottomWidth: 1, borderBottomColor: colors.ink, paddingBottom: 12 },
+    input: { flex: 1, fontFamily: serif(300), fontSize: 22, color: colors.ink },
+    done: { fontFamily: sans(400), fontSize: 10.5, letterSpacing: 1.5, textTransform: 'uppercase', color: colors.faint },
+    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 18 },
+    chip: { paddingVertical: 8, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.hair },
+    chipLabel: { fontFamily: sans(400), fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', color: colors.muted },
+    oneYear: { paddingHorizontal: 26, paddingTop: 30, marginTop: 8, borderTopWidth: 1, borderTopColor: colors.hair2 },
+    quote: { fontFamily: serif(300), fontStyle: 'italic', fontSize: 19, lineHeight: 29, color: colors.ink3, marginTop: 14 },
+    quoteMeta: { fontFamily: sans(400), fontSize: 9.5, letterSpacing: 0.3, color: colors.faint2, marginTop: 12 },
+  });
+}

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { colors, diaryMood } from '../theme/colors';
 import { serif, sans } from '../theme/fonts';
+import { useTheme } from '../theme/ThemeState';
+import { DiaryMoodShape } from '../theme/colors';
 import { CARD_WIDTH, HERO_HEIGHT, SURFACED_HEIGHT, phiSpace, phiType } from '../theme/metrics';
 import { useApp } from '../state/AppState';
 import { PROMPTS } from '../data/content';
@@ -13,6 +14,8 @@ type HeroState = 'sealed' | 'draft' | 'fresh';
 
 export function TodayScreen() {
   const { data, todayIso, todaysEntry, addFragment, navigate, setDraftText, people } = useApp();
+  const { colors, diaryMood } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [frag, setFrag] = useState('');
   const now = useState(() => new Date())[0];
 
@@ -73,7 +76,7 @@ export function TodayScreen() {
   const letterReady = letterReadyToday(data.entries);
   const everHadLetter = hasEverHadLetter(data.entries);
 
-  const hero = heroContent(heroState, { data, todaysEntry, draftWc, prompt });
+  const hero = heroContent(heroState, { data, todaysEntry, draftWc, prompt }, diaryMood);
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={{ paddingBottom: phiSpace.section }} showsVerticalScrollIndicator={false}>
@@ -170,7 +173,8 @@ export function TodayScreen() {
 
 function heroContent(
   state: HeroState,
-  ctx: { data: ReturnType<typeof useApp>['data']; todaysEntry: ReturnType<typeof useApp>['todaysEntry']; draftWc: number; prompt: string }
+  ctx: { data: ReturnType<typeof useApp>['data']; todaysEntry: ReturnType<typeof useApp>['todaysEntry']; draftWc: number; prompt: string },
+  diaryMood: DiaryMoodShape
 ): { dot: string; kicker: string; body: string; cta: string; meta: string } {
   if (state === 'sealed' && ctx.todaysEntry) {
     return {
@@ -199,7 +203,8 @@ function heroContent(
   };
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.paper, paddingTop: phiSpace.top },
   gutter: { paddingHorizontal: phiSpace.gutter },
 
@@ -258,4 +263,5 @@ const styles = StyleSheet.create({
   sundayLabel: { fontFamily: sans(400), fontSize: phiType.label, letterSpacing: 1.235, textTransform: 'uppercase', color: colors.faint2 },
   sundayRule: { flex: 1, height: 1, backgroundColor: colors.hair2 },
   sundayValue: { fontFamily: sans(400), fontSize: phiType.label, color: colors.faint },
-});
+  });
+}

@@ -19,6 +19,7 @@ import {
 } from './types';
 import { MoodKey } from '../theme/colors';
 import { PROMPTS, TemplateId } from '../data/content';
+import { PlanChoice } from '../data/pricing';
 import { toIso } from '../utils/date';
 import { wordCount, deriveTitle } from '../utils/words';
 import { classifyMood } from '../utils/mood';
@@ -29,6 +30,7 @@ interface NavEntry {
   entryId?: number;
   personId?: string;
   searchQuery?: string;
+  planChoice?: PlanChoice;
 }
 
 export interface NewPersonInput {
@@ -51,7 +53,8 @@ interface AppContextShape {
   openEntryId: number | null;
   openPersonId: string | null;
   openSearchQuery: string | null;
-  navigate: (screen: Screen, opts?: { entryId?: number; personId?: string; searchQuery?: string; replace?: boolean }) => void;
+  openPlanChoice: PlanChoice | null;
+  navigate: (screen: Screen, opts?: { entryId?: number; personId?: string; searchQuery?: string; planChoice?: PlanChoice; replace?: boolean }) => void;
   goBack: () => void;
   reset: (screen: Screen) => void;
   goEntries: () => void;
@@ -144,10 +147,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const openEntryId = screenEntry.entryId ?? null;
   const openPersonId = screenEntry.personId ?? null;
   const openSearchQuery = screenEntry.searchQuery ?? null;
+  const openPlanChoice = screenEntry.planChoice ?? null;
 
-  const navigate = useCallback((next: Screen, opts?: { entryId?: number; personId?: string; searchQuery?: string; replace?: boolean }) => {
+  const navigate = useCallback((next: Screen, opts?: { entryId?: number; personId?: string; searchQuery?: string; planChoice?: PlanChoice; replace?: boolean }) => {
     setNav((prev) => {
-      const entry: NavEntry = { screen: next, entryId: opts?.entryId, personId: opts?.personId, searchQuery: opts?.searchQuery };
+      const entry: NavEntry = { screen: next, entryId: opts?.entryId, personId: opts?.personId, searchQuery: opts?.searchQuery, planChoice: opts?.planChoice };
       if (opts?.replace) return [...prev.slice(0, -1), entry];
       return [...prev, entry];
     });
@@ -360,6 +364,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       openEntryId,
       openPersonId,
       openSearchQuery,
+      openPlanChoice,
       navigate,
       goBack,
       reset,
@@ -399,6 +404,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       openEntryId,
       openPersonId,
       openSearchQuery,
+      openPlanChoice,
       navigate,
       goBack,
       reset,

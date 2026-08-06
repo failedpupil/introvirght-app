@@ -6,8 +6,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import * as Notifications from 'expo-notifications';
 
-import { colors } from './src/theme/colors';
 import { fontAssets } from './src/theme/fonts';
+import { ThemeProvider, useTheme } from './src/theme/ThemeState';
 import { AppProvider, useApp } from './src/state/AppState';
 import { EchoesProvider } from './src/echoes/EchoesState';
 import { TABBED_SCREENS } from './src/state/types';
@@ -36,6 +36,9 @@ import { SigninScreen } from './src/screens/SigninScreen';
 import { YouScreen } from './src/screens/YouScreen';
 import { PrivacyScreen } from './src/screens/PrivacyScreen';
 import { PaywallScreen } from './src/screens/PaywallScreen';
+import { AppearanceScreen } from './src/screens/AppearanceScreen';
+import { CheckoutScreen } from './src/screens/CheckoutScreen';
+import { PurchasedScreen } from './src/screens/PurchasedScreen';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -98,6 +101,12 @@ function Router() {
       return <PrivacyScreen />;
     case 'paywall':
       return <PaywallScreen />;
+    case 'appearance':
+      return <AppearanceScreen />;
+    case 'checkout':
+      return <CheckoutScreen />;
+    case 'purchased':
+      return <PurchasedScreen />;
     default:
       return <LockScreen />;
   }
@@ -105,18 +114,19 @@ function Router() {
 
 function Shell() {
   const { ready, screen } = useApp();
+  const { ready: themeReady, colors, paper } = useTheme();
 
   useEffect(() => {
-    if (ready) SplashScreen.hideAsync().catch(() => {});
-  }, [ready]);
+    if (ready && themeReady) SplashScreen.hideAsync().catch(() => {});
+  }, [ready, themeReady]);
 
-  if (!ready) return null;
+  if (!ready || !themeReady) return null;
 
   const showTabs = TABBED_SCREENS.includes(screen);
 
   return (
-    <View style={styles.root}>
-      <StatusBar style="dark" />
+    <View style={[styles.root, { backgroundColor: colors.paper }]}>
+      <StatusBar style={paper === 'night' ? 'light' : 'dark'} />
       <View style={{ flex: 1 }}>
         <Router />
       </View>
@@ -132,15 +142,17 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <EchoesProvider>
-        <AppProvider>
-          <Shell />
-        </AppProvider>
-      </EchoesProvider>
+      <ThemeProvider>
+        <EchoesProvider>
+          <AppProvider>
+            <Shell />
+          </AppProvider>
+        </EchoesProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.paper },
+  root: { flex: 1 },
 });

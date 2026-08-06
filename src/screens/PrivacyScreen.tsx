@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { colors } from '../theme/colors';
 import { serif, sans } from '../theme/fonts';
+import { useTheme } from '../theme/ThemeState';
 import { BackLink } from '../components/Basics';
 import { useApp } from '../state/AppState';
 
@@ -14,6 +14,8 @@ const ROWS = [
 
 export function PrivacyScreen() {
   const { navigate } = useApp();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <ScrollView style={styles.root} showsVerticalScrollIndicator={false}>
       <View style={{ paddingHorizontal: 26 }}>
@@ -41,13 +43,15 @@ export function PrivacyScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.paper, paddingTop: 58 },
-  title: { fontFamily: serif(400), fontSize: 31, lineHeight: 37, letterSpacing: -0.5, color: colors.ink, maxWidth: 280 },
-  sub: { fontFamily: serif(300), fontStyle: 'italic', fontSize: 19, lineHeight: 28, color: colors.muted, marginTop: 14 },
-  row: { paddingVertical: 20, borderTopWidth: 1, borderTopColor: colors.hair2 },
-  rowTitle: { fontFamily: serif(400), fontSize: 19, letterSpacing: -0.1, color: colors.ink },
-  rowBody: { fontFamily: serif(300), fontSize: 16.5, lineHeight: 25, color: colors.muted, marginTop: 7 },
-  explainer: { marginTop: 26, padding: 20, backgroundColor: colors.paperSunk },
-  explainerText: { fontFamily: sans(400), fontSize: 11, lineHeight: 19, color: '#6B665E' },
-});
+function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.paper, paddingTop: 58 },
+    title: { fontFamily: serif(400), fontSize: 31, lineHeight: 37, letterSpacing: -0.5, color: colors.ink, maxWidth: 280 },
+    sub: { fontFamily: serif(300), fontStyle: 'italic', fontSize: 19, lineHeight: 28, color: colors.muted, marginTop: 14 },
+    row: { paddingVertical: 20, borderTopWidth: 1, borderTopColor: colors.hair2 },
+    rowTitle: { fontFamily: serif(400), fontSize: 19, letterSpacing: -0.1, color: colors.ink },
+    rowBody: { fontFamily: serif(300), fontSize: 16.5, lineHeight: 25, color: colors.muted, marginTop: 7 },
+    explainer: { marginTop: 26, padding: 20, backgroundColor: colors.paperSunk },
+    explainerText: { fontFamily: sans(400), fontSize: 11, lineHeight: 19, color: colors.ink4 },
+  });
+}

@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { LayoutChangeEvent, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { colors, diaryMood } from '../theme/colors';
 import { serif, sans } from '../theme/fonts';
+import { useTheme } from '../theme/ThemeState';
+import { DiaryMoodShape, MoodKey } from '../theme/colors';
 import { Kicker } from '../components/Basics';
 import { EntryRow } from '../components/EntryRow';
 import { MagnifierIcon } from '../icons/Icons';
@@ -10,7 +11,7 @@ import { monthName as monthNameOf, toIso } from '../utils/date';
 
 type ViewMode = 'list' | 'weather';
 
-const MOOD_LEGEND: { key: keyof typeof diaryMood; label: string }[] = [
+const MOOD_LEGEND: { key: MoodKey; label: string }[] = [
   { key: 'quiet', label: 'Quiet' },
   { key: 'clear', label: 'Clear' },
   { key: 'warm', label: 'Warm' },
@@ -23,6 +24,8 @@ const GRID_GAP = 7;
 
 export function EntriesScreen() {
   const { data, navigate } = useApp();
+  const { colors, diaryMood } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [view, setView] = useState<ViewMode>('list');
   const [gridWidth, setGridWidth] = useState(0);
   const cellSize = gridWidth > 0 ? (gridWidth - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS : 0;
@@ -39,7 +42,7 @@ export function EntriesScreen() {
     return Array.from(byMonth.entries());
   }, [data.entries]);
 
-  const weather = useMemo(() => buildWeather(data.entries), [data.entries]);
+  const weather = useMemo(() => buildWeather(data.entries, diaryMood), [data.entries, diaryMood]);
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={{ paddingBottom: 12 }} showsVerticalScrollIndicator={false}>
@@ -126,12 +129,18 @@ export function EntriesScreen() {
 }
 
 function SegButton({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  const { colors } = useTheme();
   return (
-    <Pressable onPress={onPress} style={styles.segBtn}>
-      <Text style={[styles.segLabel, { color: active ? colors.ink : colors.faint, borderBottomColor: active ? colors.ink : 'transparent' }]}>{label}</Text>
+    <Pressable onPress={onPress} style={segStyles.segBtn}>
+      <Text style={[segStyles.segLabel, { color: active ? colors.ink : colors.faint, borderBottomColor: active ? colors.ink : 'transparent' }]}>{label}</Text>
     </Pressable>
   );
 }
+
+const segStyles = StyleSheet.create({
+  segBtn: { paddingBottom: 10, marginRight: 22 },
+  segLabel: { fontFamily: sans(400), fontSize: 10, letterSpacing: 1.4, textTransform: 'uppercase', borderBottomWidth: 1, paddingBottom: 10 },
+});
 
 function padToGrid(days: { color: string | null }[]): ({ color: string | null } | null)[] {
   const remainder = days.length % GRID_COLS;
@@ -139,11 +148,11 @@ function padToGrid(days: { color: string | null }[]): ({ color: string | null } 
   return [...days, ...Array(GRID_COLS - remainder).fill(null)];
 }
 
-function buildWeather(entries: { iso: string; mood: keyof typeof diaryMood }[]) {
+function buildWeather(entries: { iso: string; mood: MoodKey }[], diaryMood: DiaryMoodShape) {
   const byIso = new Map(entries.map((e) => [e.iso, e.mood]));
   const today = new Date();
   const months: { key: string; name: string; days: { color: string | null }[] }[] = [];
-  const counts: Partial<Record<keyof typeof diaryMood, number>> = {};
+  const counts: Partial<Record<MoodKey, number>> = {};
   let writtenCount = 0;
   let totalDays = 0;
 
@@ -170,21 +179,21 @@ function buildWeather(entries: { iso: string; mood: keyof typeof diaryMood }[]) 
   return { months, counts, writtenCount, unwritten: Math.max(0, totalDays - writtenCount) };
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.paper, paddingTop: 66 },
-  headerRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 16 },
-  title: { fontFamily: serif(400), fontSize: 34, letterSpacing: -0.7, color: colors.ink },
-  findBtn: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 6 },
-  findLabel: { fontFamily: sans(400), fontSize: 10.5, letterSpacing: 1.5, textTransform: 'uppercase', color: colors.muted },
-  segRow: { flexGrow: 0, gap: 22, marginTop: 20, borderBottomWidth: 1, borderBottomColor: colors.hair },
-  segBtn: { paddingBottom: 10, marginRight: 22 },
-  segLabel: { fontFamily: sans(400), fontSize: 10, letterSpacing: 1.4, textTransform: 'uppercase', borderBottomWidth: 1, paddingBottom: 10 },
-  monthKicker: { paddingHorizontal: 26, paddingTop: 22, paddingBottom: 8, fontFamily: sans(400), fontSize: 9.5, letterSpacing: 1.7, textTransform: 'uppercase', color: colors.faint },
-  weatherSummary: { fontFamily: serif(300), fontStyle: 'italic', fontSize: 21, lineHeight: 30, color: colors.ink3, maxWidth: 280 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-  legend: { gap: 11, marginTop: 34, paddingTop: 22, borderTopWidth: 1, borderTopColor: colors.hair },
-  legendRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  legendDot: { width: 9, height: 9, borderRadius: 5 },
-  legendLabel: { fontFamily: serif(300), fontSize: 17, color: colors.ink3 },
-  legendCount: { fontFamily: sans(400), fontSize: 10, color: colors.faint },
-});
+function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.paper, paddingTop: 66 },
+    headerRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 16 },
+    title: { fontFamily: serif(400), fontSize: 34, letterSpacing: -0.7, color: colors.ink },
+    findBtn: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 6 },
+    findLabel: { fontFamily: sans(400), fontSize: 10.5, letterSpacing: 1.5, textTransform: 'uppercase', color: colors.muted },
+    segRow: { flexGrow: 0, gap: 22, marginTop: 20, borderBottomWidth: 1, borderBottomColor: colors.hair },
+    monthKicker: { paddingHorizontal: 26, paddingTop: 22, paddingBottom: 8, fontFamily: sans(400), fontSize: 9.5, letterSpacing: 1.7, textTransform: 'uppercase', color: colors.faint },
+    weatherSummary: { fontFamily: serif(300), fontStyle: 'italic', fontSize: 21, lineHeight: 30, color: colors.ink3, maxWidth: 280 },
+    grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+    legend: { gap: 11, marginTop: 34, paddingTop: 22, borderTopWidth: 1, borderTopColor: colors.hair },
+    legendRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    legendDot: { width: 9, height: 9, borderRadius: 5 },
+    legendLabel: { fontFamily: serif(300), fontSize: 17, color: colors.ink3 },
+    legendCount: { fontFamily: sans(400), fontSize: 10, color: colors.faint },
+  });
+}

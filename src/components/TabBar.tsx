@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '../theme/colors';
 import { sans } from '../theme/fonts';
+import { useTheme } from '../theme/ThemeState';
 import { TabEchoesIcon, TabEntriesIcon, TabPeopleIcon, TabWriteIcon, TabYouIcon } from '../icons/Icons';
 import { useApp } from '../state/AppState';
 import { Screen } from '../state/types';
@@ -13,11 +13,13 @@ const WRITE_GROUP: Screen[] = ['today', 'write', 'sealed'];
 const ENTRIES_GROUP: Screen[] = ['entries', 'entry', 'search', 'review', 'empty'];
 const PEOPLE_GROUP: Screen[] = ['people', 'person', 'newPerson', 'peopleEmpty'];
 const ECHOES_GROUP: Screen[] = ['echoes', 'compose', 'signin'];
-const YOU_GROUP: Screen[] = ['you', 'privacy', 'paywall'];
+const YOU_GROUP: Screen[] = ['you', 'privacy', 'paywall', 'appearance', 'checkout', 'purchased'];
 
 export function TabBar() {
   const { screen, reset, goEntries, goPeople } = useApp();
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const writeActive = WRITE_GROUP.includes(screen);
   const entriesActive = ENTRIES_GROUP.includes(screen);
@@ -49,32 +51,29 @@ function Tab({
   icon: (color: string) => React.ReactNode;
   tracking?: number;
 }) {
+  const { colors } = useTheme();
   const color = active ? colors.ink : colors.tabInactive;
   return (
-    <Pressable onPress={onPress} style={styles.tab}>
+    <Pressable onPress={onPress} style={tabStyles.tab}>
       {icon(color)}
-      <Text style={[styles.label, { color, letterSpacing: tracking ?? DEFAULT_TRACKING }]}>{label}</Text>
+      <Text style={[tabStyles.label, { color, letterSpacing: tracking ?? DEFAULT_TRACKING }]}>{label}</Text>
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  bar: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: colors.hair,
-    backgroundColor: colors.paper,
-    paddingTop: 12,
-  },
-  tab: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 7,
-    paddingVertical: 10,
-  },
-  label: {
-    fontFamily: sans(400),
-    fontSize: 9,
-    textTransform: 'uppercase',
-  },
+const tabStyles = StyleSheet.create({
+  tab: { flex: 1, alignItems: 'center', gap: 7, paddingVertical: 10 },
+  label: { fontFamily: sans(400), fontSize: 9, textTransform: 'uppercase' },
 });
+
+function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
+    bar: {
+      flexDirection: 'row',
+      borderTopWidth: 1,
+      borderTopColor: colors.hair,
+      backgroundColor: colors.paper,
+      paddingTop: 12,
+    },
+  });
+}

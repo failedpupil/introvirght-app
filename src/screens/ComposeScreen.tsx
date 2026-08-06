@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { colors, feelColor } from '../theme/colors';
 import { serif, sans } from '../theme/fonts';
+import { useTheme } from '../theme/ThemeState';
 import { useApp } from '../state/AppState';
 import { useEchoes } from '../echoes/EchoesState';
 import { FEELS, FeelId } from '../data/content';
@@ -11,6 +11,8 @@ const MAX = 280;
 export function ComposeScreen() {
   const { goBack, navigate } = useApp();
   const { post } = useEchoes();
+  const { colors, feelColor } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [draft, setDraft] = useState('');
   const [feel, setFeel] = useState<FeelId>('quiet');
 
@@ -58,13 +60,15 @@ export function ComposeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.paper, paddingTop: 58 },
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 22, paddingVertical: 6, paddingBottom: 14 },
-  topLabel: { fontFamily: sans(400), fontSize: 10.5, letterSpacing: 1.5, textTransform: 'uppercase', color: colors.faint },
-  counter: { fontFamily: sans(400), fontSize: 10, letterSpacing: 0.6 },
-  feelRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, paddingHorizontal: 26, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: colors.hair2 },
-  feelLabel: { fontFamily: sans(400), fontSize: 10, letterSpacing: 1.3, textTransform: 'uppercase', paddingVertical: 3, borderBottomWidth: 1 },
-  textarea: { fontFamily: serif(300), fontSize: 21, lineHeight: 34, color: colors.ink, minHeight: 150 },
-  footnote: { fontFamily: sans(400), fontSize: 10.5, letterSpacing: 0.4, color: colors.faint, lineHeight: 17, marginTop: 18 },
-});
+function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.paper, paddingTop: 58 },
+    topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 22, paddingVertical: 6, paddingBottom: 14 },
+    topLabel: { fontFamily: sans(400), fontSize: 10.5, letterSpacing: 1.5, textTransform: 'uppercase', color: colors.faint },
+    counter: { fontFamily: sans(400), fontSize: 10, letterSpacing: 0.6 },
+    feelRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, paddingHorizontal: 26, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: colors.hair2 },
+    feelLabel: { fontFamily: sans(400), fontSize: 10, letterSpacing: 1.3, textTransform: 'uppercase', paddingVertical: 3, borderBottomWidth: 1 },
+    textarea: { fontFamily: serif(300), fontSize: 21, lineHeight: 34, color: colors.ink, minHeight: 150 },
+    footnote: { fontFamily: sans(400), fontSize: 10.5, letterSpacing: 0.4, color: colors.faint, lineHeight: 17, marginTop: 18 },
+  });
+}

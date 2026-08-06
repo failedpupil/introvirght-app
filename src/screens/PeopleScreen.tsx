@@ -1,11 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { colors, energyColor } from '../theme/colors';
 import { serif, sans } from '../theme/fonts';
+import { useTheme } from '../theme/ThemeState';
 import { PersonAvatar } from '../components/PersonAvatar';
 import { CLOSENESS_RINGS } from '../data/people';
 import { useApp } from '../state/AppState';
-import { Closeness, Person } from '../state/types';
+import { Person } from '../state/types';
 import { relativeDaysAgo } from '../utils/date';
 import { mapSummary, peopleInRing } from '../utils/people';
 
@@ -16,6 +16,8 @@ const CENTER = BOX / 2;
 
 export function PeopleScreen() {
   const { people, navigate } = useApp();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [view, setView] = useState<ViewMode>('everyone');
 
   const groups = useMemo(
@@ -65,6 +67,8 @@ export function PeopleScreen() {
 }
 
 function PersonRow({ person, onPress }: { person: Person; onPress: () => void }) {
+  const { colors, energyColor } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.paperHover }]}>
       <PersonAvatar name={person.name} closeness={person.closeness} size={34} fontSize={15} />
@@ -84,6 +88,8 @@ function PersonRow({ person, onPress }: { person: Person; onPress: () => void })
 }
 
 function MapView({ people, onOpen }: { people: Person[]; onOpen: (id: string) => void }) {
+  const { colors, energyColor } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const summary = useMemo(() => mapSummary(people), [people]);
   const legendCounts = useMemo(() => {
     const counts = { gives: 0, neutral: 0, takes: 0 } as Record<'gives' | 'neutral' | 'takes', number>;
@@ -149,6 +155,8 @@ function MapView({ people, onOpen }: { people: Person[]; onOpen: (id: string) =>
 }
 
 function LegendRow({ color, label, count }: { color: string; label: string; count: number }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.legendRow}>
       <View style={[styles.legendDot, { backgroundColor: color }]} />
@@ -160,6 +168,8 @@ function LegendRow({ color, label, count }: { color: string; label: string; coun
 }
 
 function SegButton({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <Pressable onPress={onPress} style={styles.segBtn}>
       <Text style={[styles.segLabel, { color: active ? colors.ink : colors.faint, borderBottomColor: active ? colors.ink : 'transparent' }]}>{label}</Text>
@@ -167,48 +177,50 @@ function SegButton({ label, active, onPress }: { label: string; active: boolean;
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.paper, paddingTop: 66 },
-  headerRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 16 },
-  title: { fontFamily: serif(400), fontSize: 34, letterSpacing: -0.7, color: colors.ink },
-  addBtn: { paddingVertical: 6 },
-  addLabel: { fontFamily: sans(400), fontSize: 14, letterSpacing: 0.3, color: colors.muted },
-  subline: { fontFamily: serif(300), fontStyle: 'italic', fontSize: 17, lineHeight: 25, color: colors.muted, marginTop: 12, maxWidth: 300 },
-  segRow: { flexGrow: 0, gap: 22, marginTop: 20, borderBottomWidth: 1, borderBottomColor: colors.hair },
-  segBtn: { paddingBottom: 10, marginRight: 22 },
-  segLabel: { fontFamily: sans(400), fontSize: 10, letterSpacing: 1.4, textTransform: 'uppercase', borderBottomWidth: 1, paddingBottom: 10 },
+function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.paper, paddingTop: 66 },
+    headerRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 16 },
+    title: { fontFamily: serif(400), fontSize: 34, letterSpacing: -0.7, color: colors.ink },
+    addBtn: { paddingVertical: 6 },
+    addLabel: { fontFamily: sans(400), fontSize: 14, letterSpacing: 0.3, color: colors.muted },
+    subline: { fontFamily: serif(300), fontStyle: 'italic', fontSize: 17, lineHeight: 25, color: colors.muted, marginTop: 12, maxWidth: 300 },
+    segRow: { flexGrow: 0, gap: 22, marginTop: 20, borderBottomWidth: 1, borderBottomColor: colors.hair },
+    segBtn: { paddingBottom: 10, marginRight: 22 },
+    segLabel: { fontFamily: sans(400), fontSize: 10, letterSpacing: 1.4, textTransform: 'uppercase', borderBottomWidth: 1, paddingBottom: 10 },
 
-  groupHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: 26, paddingTop: 22, paddingBottom: 8 },
-  groupKicker: { fontFamily: sans(400), fontSize: 9.5, letterSpacing: 1.8, color: colors.faint },
-  groupCount: { fontFamily: sans(400), fontSize: 10, color: colors.faint2 },
+    groupHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: 26, paddingTop: 22, paddingBottom: 8 },
+    groupKicker: { fontFamily: sans(400), fontSize: 9.5, letterSpacing: 1.8, color: colors.faint },
+    groupCount: { fontFamily: sans(400), fontSize: 10, color: colors.faint2 },
 
-  row: { flexDirection: 'row', gap: 14, paddingVertical: 17, paddingHorizontal: 26, borderTopWidth: 1, borderTopColor: colors.hair2 },
-  rowNameLine: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
-  rowName: { fontFamily: serif(400), fontSize: 19, letterSpacing: -0.15, color: colors.ink },
-  rowRelation: { fontFamily: sans(400), fontSize: 9.5, letterSpacing: 1.2, color: colors.faint },
-  rowLine: { fontFamily: serif(300), fontSize: 16, lineHeight: 23, color: colors.muted, marginTop: 4 },
-  rowMeta: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 8 },
-  energyDot: { width: 5, height: 5, borderRadius: 3 },
-  rowWhen: { fontFamily: sans(400), fontSize: 9.5, color: colors.faint2 },
+    row: { flexDirection: 'row', gap: 14, paddingVertical: 17, paddingHorizontal: 26, borderTopWidth: 1, borderTopColor: colors.hair2 },
+    rowNameLine: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
+    rowName: { fontFamily: serif(400), fontSize: 19, letterSpacing: -0.15, color: colors.ink },
+    rowRelation: { fontFamily: sans(400), fontSize: 9.5, letterSpacing: 1.2, color: colors.faint },
+    rowLine: { fontFamily: serif(300), fontSize: 16, lineHeight: 23, color: colors.muted, marginTop: 4 },
+    rowMeta: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 8 },
+    energyDot: { width: 5, height: 5, borderRadius: 3 },
+    rowWhen: { fontFamily: sans(400), fontSize: 9.5, color: colors.faint2 },
 
-  footerWrap: { paddingHorizontal: 26, marginTop: 22 },
-  hairline: { height: 1, backgroundColor: colors.hair },
-  footerNote: { fontFamily: serif(300), fontStyle: 'italic', fontSize: 15, lineHeight: 22, color: colors.faint, marginTop: 18 },
+    footerWrap: { paddingHorizontal: 26, marginTop: 22 },
+    hairline: { height: 1, backgroundColor: colors.hair },
+    footerNote: { fontFamily: serif(300), fontStyle: 'italic', fontSize: 15, lineHeight: 22, color: colors.faint, marginTop: 18 },
 
-  mapSummary: { fontFamily: serif(300), fontStyle: 'italic', fontSize: 20, lineHeight: 29, color: colors.ink3, maxWidth: 300 },
-  mapBoxWrap: { alignItems: 'center', marginTop: 30 },
-  mapBox: { width: BOX, height: BOX },
-  ringCircle: { position: 'absolute', borderWidth: 1 },
-  youDot: { position: 'absolute', width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.ink, left: CENTER - 3.5, top: CENTER - 3.5 },
-  youLabel: { position: 'absolute', left: CENTER - 20, top: CENTER + 8, width: 40, textAlign: 'center', fontFamily: sans(400), fontSize: 8.5, letterSpacing: 1.4, color: colors.faint },
-  personDotWrap: { position: 'absolute', alignItems: 'center' },
-  personDot: { width: 9, height: 9, borderRadius: 4.5 },
-  personDotLabel: { fontFamily: sans(400), fontSize: 9, color: colors.ink4, marginTop: 4 },
+    mapSummary: { fontFamily: serif(300), fontStyle: 'italic', fontSize: 20, lineHeight: 29, color: colors.ink3, maxWidth: 300 },
+    mapBoxWrap: { alignItems: 'center', marginTop: 30 },
+    mapBox: { width: BOX, height: BOX },
+    ringCircle: { position: 'absolute', borderWidth: 1 },
+    youDot: { position: 'absolute', width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.ink, left: CENTER - 3.5, top: CENTER - 3.5 },
+    youLabel: { position: 'absolute', left: CENTER - 20, top: CENTER + 8, width: 40, textAlign: 'center', fontFamily: sans(400), fontSize: 8.5, letterSpacing: 1.4, color: colors.faint },
+    personDotWrap: { position: 'absolute', alignItems: 'center' },
+    personDot: { width: 9, height: 9, borderRadius: 4.5 },
+    personDotLabel: { fontFamily: sans(400), fontSize: 9, color: colors.ink4, marginTop: 4 },
 
-  legend: { gap: 11, marginTop: 34, paddingTop: 22, borderTopWidth: 1, borderTopColor: colors.hair },
-  legendRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  legendDot: { width: 9, height: 9, borderRadius: 5 },
-  legendLabel: { fontFamily: serif(300), fontSize: 16.5, color: colors.ink3 },
-  legendCount: { fontFamily: sans(400), fontSize: 10, color: colors.faint },
-  mapFootnote: { fontFamily: serif(300), fontStyle: 'italic', fontSize: 15, lineHeight: 22, color: colors.faint, marginTop: 24, marginBottom: 8 },
-});
+    legend: { gap: 11, marginTop: 34, paddingTop: 22, borderTopWidth: 1, borderTopColor: colors.hair },
+    legendRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    legendDot: { width: 9, height: 9, borderRadius: 5 },
+    legendLabel: { fontFamily: serif(300), fontSize: 16.5, color: colors.ink3 },
+    legendCount: { fontFamily: sans(400), fontSize: 10, color: colors.faint },
+    mapFootnote: { fontFamily: serif(300), fontStyle: 'italic', fontSize: 15, lineHeight: 22, color: colors.faint, marginTop: 24, marginBottom: 8 },
+  });
+}

@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { colors, energyColor } from '../theme/colors';
 import { serif, sans } from '../theme/fonts';
+import { useTheme } from '../theme/ThemeState';
 import { useApp } from '../state/AppState';
 import { CLOSENESS_RINGS, ENERGY_OPTIONS } from '../data/people';
 import { Closeness, Energy } from '../state/types';
 
 export function NewPersonScreen() {
   const { people, openPersonId, addPerson, updatePerson, goBack, goPeople } = useApp();
+  const { colors, energyColor } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const editing = people.find((p) => p.id === openPersonId);
 
   const [name, setName] = useState(editing?.name ?? '');
@@ -113,26 +115,28 @@ export function NewPersonScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.paper, paddingTop: 58 },
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 22, paddingVertical: 6, paddingBottom: 14 },
-  topLabel: { fontFamily: sans(400), fontSize: 10.5, letterSpacing: 1.5, textTransform: 'uppercase', color: colors.faint },
-  kicker: { fontFamily: sans(400), fontSize: 9.5, letterSpacing: 1.7, textTransform: 'uppercase', color: colors.faint, marginBottom: 14 },
+function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.paper, paddingTop: 58 },
+    topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 22, paddingVertical: 6, paddingBottom: 14 },
+    topLabel: { fontFamily: sans(400), fontSize: 10.5, letterSpacing: 1.5, textTransform: 'uppercase', color: colors.faint },
+    kicker: { fontFamily: sans(400), fontSize: 9.5, letterSpacing: 1.7, textTransform: 'uppercase', color: colors.faint, marginBottom: 14 },
 
-  nameInput: { fontFamily: serif(300), fontSize: 27, color: colors.ink, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: colors.ink },
-  relationInput: { fontFamily: serif(300), fontStyle: 'italic', fontSize: 19, color: colors.ink3, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.hair2, marginTop: 4 },
+    nameInput: { fontFamily: serif(300), fontSize: 27, color: colors.ink, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: colors.ink },
+    relationInput: { fontFamily: serif(300), fontStyle: 'italic', fontSize: 19, color: colors.ink3, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.hair2, marginTop: 4 },
 
-  closeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 14, paddingVertical: 15, paddingHorizontal: 10, borderBottomWidth: 1, borderBottomColor: colors.hair },
-  closeLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  closeSelectedDot: { width: 9, height: 9, borderRadius: 4.5 },
-  closeLabel: { fontFamily: serif(300), fontSize: 19 },
-  closeNote: { fontFamily: sans(400), fontSize: 10, color: colors.faint },
+    closeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 14, paddingVertical: 15, paddingHorizontal: 10, borderBottomWidth: 1, borderBottomColor: colors.hair },
+    closeLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    closeSelectedDot: { width: 9, height: 9, borderRadius: 4.5 },
+    closeLabel: { fontFamily: serif(300), fontSize: 19 },
+    closeNote: { fontFamily: sans(400), fontSize: 10, color: colors.faint },
 
-  energyRow: { flexDirection: 'row', gap: 22, flexWrap: 'wrap' },
-  energyOpt: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  energyDot: { width: 7, height: 7, borderRadius: 3.5 },
-  energyLabel: { fontFamily: sans(400), fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase', paddingBottom: 4, borderBottomWidth: 1 },
+    energyRow: { flexDirection: 'row', gap: 22, flexWrap: 'wrap' },
+    energyOpt: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+    energyDot: { width: 7, height: 7, borderRadius: 3.5 },
+    energyLabel: { fontFamily: sans(400), fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase', paddingBottom: 4, borderBottomWidth: 1 },
 
-  lineInput: { fontFamily: serif(300), fontSize: 19, color: colors.ink, minHeight: 90 },
-  footnote: { fontFamily: sans(400), fontSize: 10.5, letterSpacing: 0.3, color: colors.faint, lineHeight: 16, marginTop: 24 },
-});
+    lineInput: { fontFamily: serif(300), fontSize: 19, color: colors.ink, minHeight: 90 },
+    footnote: { fontFamily: sans(400), fontSize: 10.5, letterSpacing: 0.3, color: colors.faint, lineHeight: 16, marginTop: 24 },
+  });
+}

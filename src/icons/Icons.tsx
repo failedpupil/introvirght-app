@@ -1,5 +1,6 @@
 import React from 'react';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
+import { useTheme } from '../theme/ThemeState';
 
 export interface IconProps {
   size?: number;
@@ -8,7 +9,9 @@ export interface IconProps {
 }
 
 /** Two hairline brackets closing inward around a centred dot. */
-export function LogoMark({ size = 40, color = '#1A1815' }: IconProps) {
+export function LogoMark({ size = 40, color }: IconProps) {
+  const { colors } = useTheme();
+  color = color ?? colors.ink;
   const scale = size / 40;
   const strokeWidth = 1.4 * Math.max(1, 1 / scale) * scale + (size <= 34 ? 1.2 * scale : 0);
   return (
@@ -20,7 +23,9 @@ export function LogoMark({ size = 40, color = '#1A1815' }: IconProps) {
   );
 }
 
-export function ChevronLeft({ size = 13, color = '#B6B0A6', strokeWidth = 1.6 }: IconProps) {
+export function ChevronLeft({ size = 13, color, strokeWidth = 1.6 }: IconProps) {
+  const { colors } = useTheme();
+  color = color ?? colors.faint;
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path d="M14.5 5.5 8 12l6.5 6.5" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
@@ -28,7 +33,9 @@ export function ChevronLeft({ size = 13, color = '#B6B0A6', strokeWidth = 1.6 }:
   );
 }
 
-export function ChevronRight({ size = 13, color = '#CFC8BC', strokeWidth = 1.6 }: IconProps) {
+export function ChevronRight({ size = 13, color, strokeWidth = 1.6 }: IconProps) {
+  const { colors } = useTheme();
+  color = color ?? colors.chevron;
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path d="M9.5 5.5 16 12l-6.5 6.5" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
@@ -36,7 +43,9 @@ export function ChevronRight({ size = 13, color = '#CFC8BC', strokeWidth = 1.6 }
   );
 }
 
-export function LockIcon({ size = 13, color = '#B6B0A6', strokeWidth = 1.6 }: IconProps) {
+export function LockIcon({ size = 13, color, strokeWidth = 1.6 }: IconProps) {
+  const { colors } = useTheme();
+  color = color ?? colors.faint;
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Rect x={5} y={10.5} width={14} height={9.5} rx={2} stroke={color} strokeWidth={strokeWidth} />
@@ -45,7 +54,9 @@ export function LockIcon({ size = 13, color = '#B6B0A6', strokeWidth = 1.6 }: Ic
   );
 }
 
-export function BiometricIcon({ size = 14, color = '#5C5850', strokeWidth = 1.5 }: IconProps) {
+export function BiometricIcon({ size = 14, color, strokeWidth = 1.5 }: IconProps) {
+  const { colors } = useTheme();
+  color = color ?? colors.ink4;
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
@@ -60,7 +71,9 @@ export function BiometricIcon({ size = 14, color = '#5C5850', strokeWidth = 1.5 
   );
 }
 
-export function MagnifierIcon({ size = 14, color = '#8F8981', strokeWidth = 1.5 }: IconProps) {
+export function MagnifierIcon({ size = 14, color, strokeWidth = 1.5 }: IconProps) {
+  const { colors } = useTheme();
+  color = color ?? colors.muted;
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Circle cx={10.8} cy={10.8} r={6.4} stroke={color} strokeWidth={strokeWidth} />

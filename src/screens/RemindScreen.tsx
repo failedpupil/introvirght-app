@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import * as Notifications from 'expo-notifications';
-import { colors } from '../theme/colors';
 import { serif, sans } from '../theme/fonts';
+import { useTheme } from '../theme/ThemeState';
 import { Kicker, PrimaryButton } from '../components/Basics';
 import { useApp } from '../state/AppState';
 
@@ -15,6 +15,8 @@ const TIMES = [
 
 export function RemindScreen() {
   const { data, setRemindAt, completeOnboarding, reset } = useApp();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const finish = async (askPermission: boolean) => {
     completeOnboarding();
@@ -57,20 +59,22 @@ export function RemindScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.paper, paddingTop: 74, paddingHorizontal: 34, paddingBottom: 46 },
-  title: { fontFamily: serif(400), fontSize: 31, lineHeight: 38, letterSpacing: -0.5, color: colors.ink, maxWidth: 290 },
-  sub: { fontFamily: serif(300), fontStyle: 'italic', fontSize: 18, lineHeight: 27, color: colors.muted, marginTop: 14, maxWidth: 290 },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    gap: 14,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.hair,
-  },
-  rowLabel: { fontFamily: serif(300), fontSize: 20 },
-  rowNote: { fontFamily: sans(400), fontSize: 10, letterSpacing: 0.4, color: colors.faint },
-  skip: { fontFamily: sans(400), fontSize: 10.5, letterSpacing: 1.5, textTransform: 'uppercase', color: colors.faint },
-});
+function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.paper, paddingTop: 74, paddingHorizontal: 34, paddingBottom: 46 },
+    title: { fontFamily: serif(400), fontSize: 31, lineHeight: 38, letterSpacing: -0.5, color: colors.ink, maxWidth: 290 },
+    sub: { fontFamily: serif(300), fontStyle: 'italic', fontSize: 18, lineHeight: 27, color: colors.muted, marginTop: 14, maxWidth: 290 },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      justifyContent: 'space-between',
+      gap: 14,
+      paddingVertical: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.hair,
+    },
+    rowLabel: { fontFamily: serif(300), fontSize: 20 },
+    rowNote: { fontFamily: sans(400), fontSize: 10, letterSpacing: 0.4, color: colors.faint },
+    skip: { fontFamily: sans(400), fontSize: 10.5, letterSpacing: 1.5, textTransform: 'uppercase', color: colors.faint },
+  });
+}

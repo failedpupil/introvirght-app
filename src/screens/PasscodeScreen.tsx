@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
-import { colors } from '../theme/colors';
-import { serif, sans } from '../theme/fonts';
+import { serif } from '../theme/fonts';
+import { useTheme } from '../theme/ThemeState';
 import { BackLink, TextButton } from '../components/Basics';
 import { BiometricIcon } from '../icons/Icons';
 import { useApp } from '../state/AppState';
@@ -12,6 +12,8 @@ const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
 
 export function PasscodeScreen() {
   const { hasPasscode, setHasPasscode, reset, navigate } = useApp();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [code, setCode] = useState('');
   const [firstCode, setFirstCode] = useState<string | null>(null);
   const [wrong, setWrong] = useState(false);
@@ -147,22 +149,24 @@ export function PasscodeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.paper, paddingTop: 74, paddingHorizontal: 34, paddingBottom: 40 },
-  title: { fontFamily: serif(400), fontSize: 29, lineHeight: 35, letterSpacing: -0.5, color: colors.ink, maxWidth: 270 },
-  sub: { fontFamily: serif(300), fontStyle: 'italic', fontSize: 17, lineHeight: 26, color: colors.muted, marginTop: 12, maxWidth: 270 },
-  dots: { flexDirection: 'row', gap: 16, marginTop: 36 },
-  dot: { width: 13, height: 13, borderRadius: 7, borderWidth: 1 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 'auto' },
-  key: { paddingVertical: 19, alignItems: 'center', borderRadius: 2 },
-  keyLabel: { fontFamily: serif(300), fontSize: 26 },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 20,
-    paddingTop: 18,
-    borderTopWidth: 1,
-    borderTopColor: colors.hair2,
-  },
-});
+function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.paper, paddingTop: 74, paddingHorizontal: 34, paddingBottom: 40 },
+    title: { fontFamily: serif(400), fontSize: 29, lineHeight: 35, letterSpacing: -0.5, color: colors.ink, maxWidth: 270 },
+    sub: { fontFamily: serif(300), fontStyle: 'italic', fontSize: 17, lineHeight: 26, color: colors.muted, marginTop: 12, maxWidth: 270 },
+    dots: { flexDirection: 'row', gap: 16, marginTop: 36 },
+    dot: { width: 13, height: 13, borderRadius: 7, borderWidth: 1 },
+    grid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 'auto' },
+    key: { paddingVertical: 19, alignItems: 'center', borderRadius: 2 },
+    keyLabel: { fontFamily: serif(300), fontSize: 26 },
+    footer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: 20,
+      paddingTop: 18,
+      borderTopWidth: 1,
+      borderTopColor: colors.hair2,
+    },
+  });
+}

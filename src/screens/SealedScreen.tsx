@@ -1,11 +1,13 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors } from '../theme/colors';
 import { serif, sans } from '../theme/fonts';
+import { useTheme } from '../theme/ThemeState';
 import { useApp } from '../state/AppState';
 
 export function SealedScreen() {
   const { todaysEntry, goEntries } = useApp();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const anim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -43,12 +45,14 @@ export function SealedScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40, paddingBottom: 90 },
-  circle: { width: 52, height: 52, borderRadius: 26, borderWidth: 1, borderColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
-  circleNum: { fontFamily: serif(300), fontStyle: 'italic', fontSize: 15, color: colors.ink },
-  title: { fontFamily: serif(300), fontSize: 29, letterSpacing: -0.46, color: colors.ink, marginTop: 30 },
-  note: { fontFamily: serif(300), fontStyle: 'italic', fontSize: 18, color: colors.muted, marginTop: 12, textAlign: 'center' },
-  rule: { height: 1, width: 60, backgroundColor: colors.hair, marginVertical: 32 },
-  readBack: { fontFamily: sans(400), fontSize: 10.5, letterSpacing: 1.5, textTransform: 'uppercase', color: colors.muted, padding: 8 },
-});
+function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40, paddingBottom: 90 },
+    circle: { width: 52, height: 52, borderRadius: 26, borderWidth: 1, borderColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+    circleNum: { fontFamily: serif(300), fontStyle: 'italic', fontSize: 15, color: colors.ink },
+    title: { fontFamily: serif(300), fontSize: 29, letterSpacing: -0.46, color: colors.ink, marginTop: 30 },
+    note: { fontFamily: serif(300), fontStyle: 'italic', fontSize: 18, color: colors.muted, marginTop: 12, textAlign: 'center' },
+    rule: { height: 1, width: 60, backgroundColor: colors.hair, marginVertical: 32 },
+    readBack: { fontFamily: sans(400), fontSize: 10.5, letterSpacing: 1.5, textTransform: 'uppercase', color: colors.muted, padding: 8 },
+  });
+}

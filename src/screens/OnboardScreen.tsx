@@ -1,8 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Pressable } from 'react-native';
-import { colors } from '../theme/colors';
 import { serif, sans } from '../theme/fonts';
+import { useTheme } from '../theme/ThemeState';
 import { Kicker } from '../components/Basics';
 import { useApp } from '../state/AppState';
 import { NudgePref, Rhythm } from '../state/types';
@@ -27,6 +27,8 @@ const NUDGE_OPTS: Option<NudgePref>[] = [
 
 export function OnboardScreen() {
   const { data, setName, setRhythm, setNudgePref, onboardStep, setOnboardStep, navigate, goBack } = useApp();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const fade = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -134,7 +136,8 @@ export function OnboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.paper, paddingTop: 74, paddingHorizontal: 34, paddingBottom: 40 },
   progress: { flexDirection: 'row', gap: 6, marginBottom: 'auto' },
   bar: { height: 2, width: 26 },
@@ -166,5 +169,6 @@ const styles = StyleSheet.create({
   footer: { marginTop: 'auto', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 32 },
   backLabel: { fontFamily: sans(400), fontSize: 10.5, letterSpacing: 1.5, textTransform: 'uppercase', color: colors.faint, paddingVertical: 8 },
   ctaBtn: { paddingVertical: 15, paddingHorizontal: 34, borderRadius: 2 },
-  ctaLabel: { fontFamily: sans(400), fontSize: 10.5, letterSpacing: 1.7, textTransform: 'uppercase', color: colors.paper },
-});
+    ctaLabel: { fontFamily: sans(400), fontSize: 10.5, letterSpacing: 1.7, textTransform: 'uppercase', color: colors.paper },
+  });
+}

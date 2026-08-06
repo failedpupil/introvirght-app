@@ -1,8 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '../theme/colors';
 import { serif, sans } from '../theme/fonts';
+import { useTheme } from '../theme/ThemeState';
 import { LogoMark, LockIcon } from '../icons/Icons';
 import { Kicker, PrimaryButton } from '../components/Basics';
 import { useApp } from '../state/AppState';
@@ -10,6 +10,8 @@ import { fullDate } from '../utils/date';
 
 export function LockScreen() {
   const { data, hasPasscode, reset } = useApp();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const line = useRef(new Animated.Value(0)).current;
 
@@ -54,47 +56,49 @@ export function LockScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.paper,
-    justifyContent: 'space-between',
-    paddingTop: 120,
-    paddingHorizontal: 34,
-  },
-  wordmark: {
-    fontFamily: serif(400),
-    fontSize: 40,
-    lineHeight: 42,
-    letterSpacing: -0.9,
-    color: colors.ink,
-    marginTop: 14,
-  },
-  line: {
-    height: 1,
-    backgroundColor: colors.hair,
-    marginTop: 26,
-    marginBottom: 22,
-    transformOrigin: 'left',
-  } as any,
-  sub: {
-    fontFamily: serif(300),
-    fontStyle: 'italic',
-    fontSize: 19,
-    lineHeight: 28,
-    color: colors.muted,
-    maxWidth: 250,
-  },
-  lockedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  lockedText: {
-    fontFamily: sans(400),
-    fontSize: 10.5,
-    letterSpacing: 0.4,
-    color: colors.faint,
-  },
-});
+function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: colors.paper,
+      justifyContent: 'space-between',
+      paddingTop: 120,
+      paddingHorizontal: 34,
+    },
+    wordmark: {
+      fontFamily: serif(400),
+      fontSize: 40,
+      lineHeight: 42,
+      letterSpacing: -0.9,
+      color: colors.ink,
+      marginTop: 14,
+    },
+    line: {
+      height: 1,
+      backgroundColor: colors.hair,
+      marginTop: 26,
+      marginBottom: 22,
+      transformOrigin: 'left',
+    } as any,
+    sub: {
+      fontFamily: serif(300),
+      fontStyle: 'italic',
+      fontSize: 19,
+      lineHeight: 28,
+      color: colors.muted,
+      maxWidth: 250,
+    },
+    lockedRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+    },
+    lockedText: {
+      fontFamily: sans(400),
+      fontSize: 10.5,
+      letterSpacing: 0.4,
+      color: colors.faint,
+    },
+  });
+}
