@@ -32,7 +32,12 @@ import { NewPersonScreen } from './src/screens/NewPersonScreen';
 import { PeopleEmptyScreen } from './src/screens/PeopleEmptyScreen';
 import { EchoesScreen } from './src/screens/EchoesScreen';
 import { ComposeScreen } from './src/screens/ComposeScreen';
+import { NamingScreen } from './src/screens/NamingScreen';
 import { SigninScreen } from './src/screens/SigninScreen';
+import { LettersScreen } from './src/screens/LettersScreen';
+import { NewLetterScreen } from './src/screens/NewLetterScreen';
+import { LetterOpenScreen } from './src/screens/LetterOpenScreen';
+import { RageScreen } from './src/screens/RageScreen';
 import { YouScreen } from './src/screens/YouScreen';
 import { PrivacyScreen } from './src/screens/PrivacyScreen';
 import { PaywallScreen } from './src/screens/PaywallScreen';
@@ -93,8 +98,18 @@ function Router() {
       return <EchoesScreen />;
     case 'compose':
       return <ComposeScreen />;
+    case 'naming':
+      return <NamingScreen />;
     case 'signin':
       return <SigninScreen />;
+    case 'letters':
+      return <LettersScreen />;
+    case 'newLetter':
+      return <NewLetterScreen />;
+    case 'letterOpen':
+      return <LetterOpenScreen />;
+    case 'rage':
+      return <RageScreen />;
     case 'you':
       return <YouScreen />;
     case 'privacy':

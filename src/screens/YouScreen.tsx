@@ -9,12 +9,18 @@ import { useApp } from '../state/AppState';
 import { useEchoes } from '../echoes/EchoesState';
 import { fullDate } from '../utils/date';
 import { exportEntriesAsPlainText } from '../utils/export';
+import { isReadyUnread, sealedCount } from '../utils/letters';
+import { buildThread, daysWritten, THREAD_DAYS, whatThePagesKnow } from '../utils/thread';
+import { DiaryEntry } from '../state/types';
 
 export function YouScreen() {
-  const { data, navigate, setOnboardStep, reset } = useApp();
+  const { data, navigate, setOnboardStep, reset, letters } = useApp();
   const { signedIn, signOut } = useEchoes();
   const { colors, paper } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+
+  const readyCount = letters.filter((l) => isReadyUnread(l)).length;
+  const sealedNow = sealedCount(letters);
 
   const pages = data.entries.length;
   const words = data.entries.reduce((s, e) => s + e.wordCount, 0);
@@ -33,6 +39,14 @@ export function YouScreen() {
     { label: 'Introvirght Quiet', value: data.plan === 'quiet' ? 'Quiet plan' : 'Free plan', color: colors.gold, onPress: () => navigate('paywall') },
     { label: 'Appearance', value: paperName, color: colors.ink, onPress: () => navigate('appearance') },
     { label: 'Echoes account', value: signedIn ? 'Google · signed in' : 'Not signed in', color: signedIn ? colors.ink : colors.muted, onPress: onEchoesAccount },
+    { label: 'Echoes name', value: data.echoName || 'Not chosen', color: data.echoName ? colors.ink : colors.muted, onPress: () => navigate('naming') },
+    {
+      label: 'Letters to later',
+      value: readyCount > 0 ? `${readyCount} ready` : `${sealedNow} sealed`,
+      color: readyCount > 0 ? colors.gold : colors.ink,
+      onPress: () => navigate('letters'),
+    },
+    { label: 'Rage page', value: 'Nothing is kept', color: colors.muted, onPress: () => navigate('rage') },
     { label: 'Privacy & encryption', value: 'End-to-end', color: colors.ink, onPress: () => navigate('privacy') },
     { label: 'Fingerprint lock', value: 'On', color: colors.ink, onPress: () => {} },
     {
@@ -71,12 +85,80 @@ export function YouScreen() {
           </Pressable>
         ))}
       </View>
+      <Thread entries={data.entries} />
+      <PagesKnow entries={data.entries} />
+
       <Text style={styles.footnote}>Everything you write stays on this device. There is no feed, no follower count, nobody to perform for.</Text>
       <View style={{ paddingHorizontal: 26, paddingTop: 22 }}>
         <BorderedButton label="Close the diary" onPress={() => reset('lock')} />
       </View>
       <View style={{ height: 20 }} />
     </ScrollView>
+  );
+}
+
+/**
+ * A frequency visual with no fail state (RITUALS_ADDENDUM.md §3). Deliberately not a streak:
+ * height and colour encode how much was written, and a day with nothing is a thinner stroke
+ * rather than a break. Nothing here is red, nothing says "missed", and there is no target.
+ */
+function Thread({ entries }: { entries: DiaryEntry[] }) {
+  const { colors } = useTheme();
+  const thread = useMemo(() => buildThread(entries), [entries]);
+  const written = daysWritten(thread);
+  const missed = THREAD_DAYS - written;
+
+  if (entries.length === 0) return null;
+
+  const strokeFor = (count: number) => {
+    if (count === 0) return { height: 7, color: colors.hair };
+    if (count === 1) return { height: 15, color: colors.chevron };
+    if (count === 2) return { height: 22, color: colors.faint };
+    return { height: 29, color: colors.ink };
+  };
+
+  return (
+    <View style={{ paddingHorizontal: 26, paddingTop: 30 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 34, gap: 4 }}>
+        {thread.map((d, i) => {
+          const s = strokeFor(d.count);
+          return <View key={i} style={{ flex: 1, height: s.height, backgroundColor: s.color }} />;
+        })}
+      </View>
+      <Text style={{ fontFamily: serif(300), fontSize: 18, lineHeight: 27, color: colors.ink, marginTop: 16 }}>
+        You wrote on {written} of the last {THREAD_DAYS} days.
+      </Text>
+      {missed > 0 && (
+        <Text style={{ fontFamily: serif(300), fontStyle: 'italic', fontSize: 16, lineHeight: 25, color: colors.muted, marginTop: 6 }}>
+          {missed} you did not. The line thins there — it does not break, and you did not lose anything.
+        </Text>
+      )}
+    </View>
+  );
+}
+
+/** Identity feedback rather than scorekeeping. A row with too little data behind it is omitted. */
+function PagesKnow({ entries }: { entries: DiaryEntry[] }) {
+  const { colors } = useTheme();
+  const facts = useMemo(() => whatThePagesKnow(entries), [entries]);
+  if (facts.length === 0) return null;
+
+  return (
+    <View style={{ paddingHorizontal: 26, paddingTop: 30 }}>
+      <Text style={{ fontFamily: sans(400), fontSize: 9.5, letterSpacing: 1.4, textTransform: 'uppercase', color: colors.faint }}>
+        What the pages know
+      </Text>
+      <View style={{ marginTop: 16, gap: 14 }}>
+        {facts.map((f) => (
+          <View key={f.label} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+            <Text style={{ width: 108, fontFamily: sans(400), fontSize: 10, letterSpacing: 0.4, color: colors.faint, paddingTop: 5 }}>
+              {f.label}
+            </Text>
+            <Text style={{ flex: 1, fontFamily: serif(300), fontSize: 18, lineHeight: 27, color: colors.ink }}>{f.value}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
   );
 }
 
