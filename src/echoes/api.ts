@@ -5,6 +5,9 @@ export interface EchoItem {
   id: string;
   feel: FeelId;
   text: string;
+  /** The writer's chosen display name — the only thing shown about another user. Null on
+   * echoes written before names existed; the card falls back rather than inventing one. */
+  name: string | null;
   createdAtMs: number;
   felt: number;
   feltByMe: boolean;
@@ -62,11 +65,20 @@ export function fetchEchoes(
   });
 }
 
-export function postEchoRequest(feeling: FeelId, text: string, token: string): Promise<EchoItem> {
+export function postEchoRequest(feeling: FeelId, text: string, name: string, token: string): Promise<EchoItem> {
   return request('/v1/echoes', {
     method: 'POST',
     headers: authHeader(token),
-    body: JSON.stringify({ feeling, text }),
+    body: JSON.stringify({ feeling, text, name }),
+  });
+}
+
+/** Renames this user's echoes. See the server route for why older ones may keep the old name. */
+export function renameEchoesRequest(name: string, token: string): Promise<{ ok: boolean; renamed: number }> {
+  return request('/v1/echoes/name', {
+    method: 'POST',
+    headers: authHeader(token),
+    body: JSON.stringify({ name }),
   });
 }
 

@@ -10,12 +10,12 @@ import { useGoogleSignIn } from '../echoes/authClient';
 
 const FACTS = [
   'Your diary is never signed in. It stays on this device with no account.',
-  'Echoes are still posted with no name — signing in is not a profile.',
+  'You choose the name you write under. It can be your own or not.',
   'We keep a hash of your email so one person cannot become a hundred.',
 ];
 
 export function SigninScreen() {
-  const { goBack } = useApp();
+  const { goBack, navigate, data } = useApp();
   const { completeGoogleSignIn } = useEchoes();
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -23,7 +23,12 @@ export function SigninScreen() {
 
   const google = useGoogleSignIn(
     (session) => {
-      completeGoogleSignIn(session).then(goBack);
+      // A first-time signer has no name yet, and picking one is the next thing that has to
+      // happen — replace, so Back does not walk into the sign-in screen again (§1).
+      completeGoogleSignIn(session).then(() => {
+        if (!data.echoName) navigate('naming', { replace: true });
+        else goBack();
+      });
     },
     (message) => setError(message)
   );
@@ -65,7 +70,7 @@ export function SigninScreen() {
         </Pressable>
 
         <Text style={styles.footnote}>
-          We store a hash of your email, nothing else. It is never shown, never{'\n'}attached to an echo, and never used to contact you.
+          We store a hash of your email, nothing else. It is never shown{'\n'}beside your name, and never used to contact you.
         </Text>
       </View>
     </View>

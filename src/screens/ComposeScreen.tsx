@@ -9,8 +9,9 @@ import { FEELS, FeelId } from '../data/content';
 const MAX = 280;
 
 export function ComposeScreen() {
-  const { goBack, navigate } = useApp();
+  const { goBack, navigate, data } = useApp();
   const { post } = useEchoes();
+  const echoName = data.echoName;
   const { colors, feelColor } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [draft, setDraft] = useState('');
@@ -21,7 +22,7 @@ export function ComposeScreen() {
 
   const release = () => {
     if (!canPost) return;
-    post(feel, draft);
+    post(feel, draft, echoName);
     navigate('echoes', { replace: true });
   };
 
@@ -54,7 +55,13 @@ export function ComposeScreen() {
           style={styles.textarea}
           autoFocus
         />
-        <Text style={styles.footnote}>Posted without a name · 280 characters · fades in 7 days</Text>
+        <View style={styles.postingAsRow}>
+          <Text style={styles.postingAs}>Posting as {echoName || 'you'}</Text>
+          <Pressable onPress={() => navigate('naming')} hitSlop={8}>
+            <Text style={styles.changeLink}>Change</Text>
+          </Pressable>
+        </View>
+        <Text style={styles.footnote}>280 characters · fades in 7 days · no photos, ever</Text>
       </ScrollView>
     </View>
   );
@@ -69,6 +76,17 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
     feelRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, paddingHorizontal: 26, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: colors.hair2 },
     feelLabel: { fontFamily: sans(400), fontSize: 10, letterSpacing: 1.3, textTransform: 'uppercase', paddingVertical: 3, borderBottomWidth: 1 },
     textarea: { fontFamily: serif(300), fontSize: 21, lineHeight: 34, color: colors.ink, minHeight: 150 },
-    footnote: { fontFamily: sans(400), fontSize: 10.5, letterSpacing: 0.4, color: colors.faint, lineHeight: 17, marginTop: 18 },
+    postingAsRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 18 },
+    postingAs: { fontFamily: sans(400), fontSize: 10.5, letterSpacing: 0.4, color: colors.ink4 },
+    changeLink: {
+      fontFamily: sans(400),
+      fontSize: 10,
+      letterSpacing: 1.2,
+      textTransform: 'uppercase',
+      color: colors.faint,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.faint,
+    },
+    footnote: { fontFamily: sans(400), fontSize: 10.5, letterSpacing: 0.4, color: colors.faint, lineHeight: 17, marginTop: 8 },
   });
 }

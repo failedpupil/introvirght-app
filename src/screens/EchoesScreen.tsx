@@ -10,7 +10,8 @@ import { relativeWhen } from '../utils/date';
 type Filter = 'all' | FeelId;
 
 export function EchoesScreen() {
-  const { navigate } = useApp();
+  const { navigate, data } = useApp();
+  const echoName = data.echoName;
   const { signedIn, feed, pendingPosts, queuedCount, fetching, statsCount, initialLoad, checkForNew, applyQueued, feltThis, refreshStats } = useEchoes();
   const { colors, feelColor, energyColor } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -66,7 +67,13 @@ export function EchoesScreen() {
     setRefreshing(false);
   };
 
-  const openComposer = () => (signedIn ? navigate('compose') : navigate('signin'));
+  // Signed in but unnamed goes to `naming`, not straight to the composer (§1) — the name is
+  // chosen before the first echo, not discovered underneath it afterwards.
+  const openComposer = () => {
+    if (!signedIn) return navigate('signin');
+    if (!echoName) return navigate('naming');
+    navigate('compose');
+  };
   const onFeltThis = (id: string) => (signedIn ? feltThis(id) : navigate('signin'));
 
   const statusLabel = fetching ? 'Listening…' : signedIn ? 'Live' : 'Not signed in';
@@ -123,7 +130,7 @@ export function EchoesScreen() {
               </View>
               <Text style={styles.body}>{p.text}</Text>
               <View style={styles.actionsRow}>
-                <Text style={styles.byline}>Yours · no name attached</Text>
+                <Text style={styles.byline}>{p.name || 'You'}</Text>
                 {p.status === 'failed' && <RetryTag localId={p.localId} />}
               </View>
             </View>
@@ -146,14 +153,15 @@ export function EchoesScreen() {
                   <Text style={[styles.feltMark, { color: p.feltByMe ? colors.ink : colors.faint }]}>{p.feltByMe ? '●' : '○'}</Text>
                   <Text style={[styles.feltLabel, { color: p.feltByMe ? colors.ink : colors.faint }]}>{p.felt} felt this</Text>
                 </Pressable>
-                <Text style={styles.byline}>{p.mine ? 'Yours · no name attached' : 'Anonymous'}</Text>
+                {/* A name, never a link: no press target, nowhere to navigate to (§1). */}
+                <Text style={styles.byline}>{p.mine ? echoName || 'You' : p.name || 'Someone'}</Text>
               </View>
             </View>
           );
         })}
       </View>
 
-      <Text style={styles.footnote}>Echoes fade after seven days. Nothing here is a profile.</Text>
+      <Text style={styles.footnote}>Echoes fade after seven days. A name, and nothing else — there is no profile to open.</Text>
       {statsCount !== null && (
         <Text style={styles.statsLine}>{statsCount.toLocaleString()} people have written here</Text>
       )}
@@ -221,7 +229,8 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
     feltBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 2 },
     feltMark: { fontSize: 14 },
     feltLabel: { fontFamily: sans(400), fontSize: 10, letterSpacing: 1 },
-    byline: { fontFamily: sans(400), fontSize: 10, letterSpacing: 0.4, color: colors.faint2 },
+    // Same visual weight as the felt control beside it: content leads, the writer does not (§1).
+    byline: { fontFamily: sans(400), fontSize: 10, letterSpacing: 0.4, color: colors.muted },
     footnote: { fontFamily: serif(300), fontStyle: 'italic', fontSize: 15, lineHeight: 24, color: colors.faint, paddingHorizontal: 26, paddingTop: 28, paddingBottom: 6, borderTopWidth: 1, borderTopColor: colors.hair2 },
     statsLine: { fontFamily: sans(400), fontSize: 9.5, letterSpacing: 0.6, textTransform: 'uppercase', color: colors.faint2, paddingHorizontal: 26, paddingBottom: 24 },
   });

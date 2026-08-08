@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { FeelId } from '../data/content';
-import { ApiError, EchoItem, feltEchoRequest, fetchEchoes, fetchStats, postEchoRequest, signOutRequest } from './api';
+import { ApiError, EchoItem, feltEchoRequest, fetchEchoes, fetchStats, postEchoRequest, renameEchoesRequest, signOutRequest } from './api';
 import { AuthedSession, googleSignOutNative } from './authClient';
 
 const SESSION_KEY = 'introvirght.echoSession.v1';
@@ -12,6 +12,7 @@ export interface PendingPost {
   localId: string;
   feel: FeelId;
   text: string;
+  name: string;
   createdAtMs: number;
   status: 'sending' | 'failed';
 }
@@ -28,8 +29,10 @@ interface EchoesContextShape {
   initialLoad: (feeling?: FeelId) => Promise<void>;
   checkForNew: (feeling?: FeelId) => Promise<void>;
   applyQueued: () => void;
-  post: (feel: FeelId, text: string) => void;
+  post: (feel: FeelId, text: string, name: string) => void;
   retryPost: (localId: string) => void;
+  /** Renames this user's existing echoes, locally and on the server. */
+  renameEchoes: (name: string) => void;
   feltThis: (id: string) => void;
   refreshStats: () => Promise<void>;
 
@@ -106,13 +109,13 @@ export function EchoesProvider({ children }: { children: React.ReactNode }) {
     setQueuedItems([]);
   }, [queuedItems]);
 
-  const post = useCallback((feel: FeelId, text: string) => {
+  const post = useCallback((feel: FeelId, text: string, name: string) => {
     const token = sessionRef.current;
     if (!token) return;
     const localId = `local_${Date.now()}_${Math.round(Math.random() * 1e6)}`;
-    setPendingPosts((prev) => [{ localId, feel, text, createdAtMs: Date.now(), status: 'sending' }, ...prev]);
+    setPendingPosts((prev) => [{ localId, feel, text, name, createdAtMs: Date.now(), status: 'sending' }, ...prev]);
 
-    postEchoRequest(feel, text, token)
+    postEchoRequest(feel, text, name, token)
       .then((confirmed) => {
         setPendingPosts((prev) => prev.filter((p) => p.localId !== localId));
         setFeed((prev) => [confirmed, ...prev]);
@@ -128,7 +131,7 @@ export function EchoesProvider({ children }: { children: React.ReactNode }) {
     const item = pendingPosts.find((p) => p.localId === localId);
     if (!item) return;
     setPendingPosts((prev) => prev.map((p) => (p.localId === localId ? { ...p, status: 'sending' } : p)));
-    postEchoRequest(item.feel, item.text, token)
+    postEchoRequest(item.feel, item.text, item.name, token)
       .then((confirmed) => {
         setPendingPosts((prev) => prev.filter((p) => p.localId !== localId));
         setFeed((prev) => [confirmed, ...prev]);
@@ -137,6 +140,19 @@ export function EchoesProvider({ children }: { children: React.ReactNode }) {
         setPendingPosts((prev) => prev.map((p) => (p.localId === localId ? { ...p, status: 'failed' } : p)));
       });
   }, [pendingPosts]);
+
+  /** Renames the caller's own echoes. The local feed updates immediately so the byline on
+   * screen matches the name just chosen, even if the request is still in flight. */
+  const renameEchoes = useCallback((name: string) => {
+    const token = sessionRef.current;
+    setFeed((prev) => prev.map((e) => (e.mine ? { ...e, name } : e)));
+    setQueuedItems((prev) => prev.map((e) => (e.mine ? { ...e, name } : e)));
+    setPendingPosts((prev) => prev.map((p) => ({ ...p, name })));
+    if (!token) return;
+    renameEchoesRequest(name, token).catch(() => {
+      // the next feed fetch reports the server's truth; nothing here is worth an error state
+    });
+  }, []);
 
   const feltThis = useCallback((id: string) => {
     const token = sessionRef.current;
@@ -201,12 +217,13 @@ export function EchoesProvider({ children }: { children: React.ReactNode }) {
       applyQueued,
       post,
       retryPost,
+      renameEchoes,
       feltThis,
       refreshStats,
       completeGoogleSignIn,
       signOut,
     }),
-    [ready, session, feed, pendingPosts, queuedItems.length, fetching, statsCount, initialLoad, checkForNew, applyQueued, post, retryPost, feltThis, refreshStats, completeGoogleSignIn, signOut]
+    [ready, session, feed, pendingPosts, queuedItems.length, fetching, statsCount, initialLoad, checkForNew, applyQueued, post, retryPost, renameEchoes, feltThis, refreshStats, completeGoogleSignIn, signOut]
   );
 
   return <EchoesContext.Provider value={value}>{children}</EchoesContext.Provider>;
