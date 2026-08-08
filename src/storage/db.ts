@@ -1,6 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 import { encryptText, decryptText } from './crypto';
-import { PersistedState, defaultPersistedState, Person } from '../state/types';
+import { PersistedState, defaultPersistedState, Person, SealedLetter } from '../state/types';
 
 const DB_NAME = 'introvirght.vault.db';
 const ROW_ID = 1;
@@ -20,6 +20,16 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
         await db.execAsync(
           'CREATE TABLE IF NOT EXISTS blobs (id TEXT PRIMARY KEY NOT NULL, kind TEXT NOT NULL, ct TEXT NOT NULL, iv TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT);'
         );
+        // Letters (RITUALS_ADDENDUM.md §2) reuse the blob table with exactly three plaintext
+        // columns: opens_at, written_at, read_at. Readiness has to be answerable without
+        // decrypting anything, and "Ready now" vs "Opened" has to survive a restart — but the
+        // body stays inside `ct` like every other sealed object. These are added with ALTER so
+        // an existing install keeps its rows.
+        for (const col of ['opens_at', 'written_at', 'read_at']) {
+          await db.execAsync(`ALTER TABLE blobs ADD COLUMN ${col} TEXT;`).catch(() => {
+            // already present — SQLite has no ADD COLUMN IF NOT EXISTS
+          });
+        }
         return db;
       })
       .catch((err) => {
@@ -109,5 +119,93 @@ export async function upsertPerson(person: Person): Promise<void> {
      VALUES (?, 'person', ?, ?, ?, ?, NULL)
      ON CONFLICT(id) DO UPDATE SET ct = excluded.ct, iv = excluded.iv, updated_at = excluded.updated_at;`,
     [person.id, sealed.ct, sealed.iv, now, now]
+  );
+}
+
+interface LetterRow {
+  id: string;
+  opens_at: string;
+  written_at: string;
+  read_at: string | null;
+  ct: string | null;
+  iv: string | null;
+}
+
+function rowToLetter(row: LetterRow, body: string): SealedLetter {
+  return {
+    id: row.id,
+    writtenAtMs: Date.parse(row.written_at),
+    opensAtMs: Date.parse(row.opens_at),
+    readAtMs: row.read_at ? Date.parse(row.read_at) : null,
+    body,
+  };
+}
+
+/**
+ * Every letter, with the body of any still-sealed one withheld.
+ *
+ * The `CASE` is the whole point: a sealed letter's ciphertext never leaves SQLite, so the
+ * decrypted body cannot sit in memory waiting to be found — the same guarantee the addendum
+ * asks the server for, applied at the only boundary this architecture actually has (§2,
+ * Option A). Sealed rows come back with `body: ''`.
+ */
+export async function listLetters(nowMs = Date.now()): Promise<SealedLetter[]> {
+  const db = await getDb();
+  const nowIso = new Date(nowMs).toISOString();
+  const rows = await db.getAllAsync<LetterRow>(
+    `SELECT id, opens_at, written_at, read_at,
+            CASE WHEN opens_at <= ? THEN ct ELSE NULL END AS ct,
+            CASE WHEN opens_at <= ? THEN iv ELSE NULL END AS iv
+     FROM blobs
+     WHERE kind = 'letter' AND deleted_at IS NULL
+     ORDER BY opens_at ASC;`,
+    [nowIso, nowIso]
+  );
+  const letters: SealedLetter[] = [];
+  for (const row of rows) {
+    if (!row.ct || !row.iv) {
+      letters.push(rowToLetter(row, ''));
+      continue;
+    }
+    try {
+      const json = await decryptText({ ct: row.ct, iv: row.iv });
+      letters.push(rowToLetter(row, (JSON.parse(json) as { body: string }).body));
+    } catch {
+      letters.push(rowToLetter(row, ''));
+    }
+  }
+  return letters;
+}
+
+/** Seal a letter. There is deliberately no update or delete counterpart — see §2. */
+export async function insertLetter(letter: SealedLetter): Promise<void> {
+  const db = await getDb();
+  const sealed = await encryptText(JSON.stringify({ body: letter.body }));
+  await db.runAsync(
+    `INSERT INTO blobs (id, kind, ct, iv, created_at, updated_at, deleted_at, opens_at, written_at, read_at)
+     VALUES (?, 'letter', ?, ?, ?, ?, NULL, ?, ?, NULL);`,
+    [
+      letter.id,
+      sealed.ct,
+      sealed.iv,
+      new Date(letter.writtenAtMs).toISOString(),
+      new Date(letter.writtenAtMs).toISOString(),
+      new Date(letter.opensAtMs).toISOString(),
+      new Date(letter.writtenAtMs).toISOString(),
+    ]
+  );
+}
+
+/**
+ * Stamp `read_at`, once. The `read_at IS NULL` guard keeps the first open the real one, so
+ * re-reading a letter later never rewrites the moment it was opened. Refuses to mark a letter
+ * read before it opens, so a caller bug can't retroactively unseal one.
+ */
+export async function markLetterRead(id: string, nowMs = Date.now()): Promise<void> {
+  const db = await getDb();
+  const nowIso = new Date(nowMs).toISOString();
+  await db.runAsync(
+    "UPDATE blobs SET read_at = ?, updated_at = ? WHERE id = ? AND kind = 'letter' AND read_at IS NULL AND opens_at <= ?;",
+    [nowIso, nowIso, id, nowIso]
   );
 }

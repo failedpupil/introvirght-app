@@ -215,6 +215,11 @@ export function buildSurfacedPool(data: PersistedState, people: Person[]): Surfa
   return pool.filter((s): s is Surfaced => s !== null);
 }
 
+/* The three helpers below describe the app-generated *weekly review* letter, not the sealed
+ * letters a user writes (RITUALS_ADDENDUM.md §2 — see `utils/letters.ts`). They lost their
+ * last caller when the home screen's "Sunday's letter" row was replaced by the Letters row;
+ * they are kept because the weekly letter itself still exists on the review screen. */
+
 /** Whether the user has ever had a real weekly letter (proxy: ever had a week with
  * enough entries to clear the same threshold computeWeeklyLetter itself uses). */
 export function hasEverHadLetter(entries: DiaryEntry[]): boolean {
