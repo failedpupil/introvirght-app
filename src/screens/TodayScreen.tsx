@@ -8,16 +8,20 @@ import { useApp } from '../state/AppState';
 import { PROMPTS } from '../data/content';
 import { fullDate, timeLabel, weekdayName } from '../utils/date';
 import { wordCount, lastWords } from '../utils/words';
-import { buildSurfacedPool, daysUntilSunday, hasEverHadLetter, letterReadyToday, Surfaced } from '../utils/surfaced';
+import { buildSurfacedPool, Surfaced } from '../utils/surfaced';
+import { firstReadyLetter, nextOpeningLabel, sealedInLabel } from '../utils/letters';
 
 type HeroState = 'sealed' | 'draft' | 'fresh';
 
 export function TodayScreen() {
-  const { data, todayIso, todaysEntry, addFragment, navigate, setDraftText, people } = useApp();
+  const { data, todayIso, todaysEntry, addFragment, navigate, setDraftText, people, letters, openLetter } = useApp();
   const { colors, diaryMood } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [frag, setFrag] = useState('');
   const now = useState(() => new Date())[0];
+
+  const readyLetter = useMemo(() => firstReadyLetter(letters), [letters]);
+  const nextOpening = useMemo(() => nextOpeningLabel(letters), [letters]);
 
   // Computed once per visit to this screen, not on every keystroke elsewhere in the
   // app — HOME_SCREEN_ADDENDUM.md §5 calls for this cached for the session, and a
@@ -72,9 +76,6 @@ export function TodayScreen() {
     setFrag('');
   };
   const fragsToday = data.todayFragmentsIso === todayIso ? data.todayFragments : [];
-
-  const letterReady = letterReadyToday(data.entries);
-  const everHadLetter = hasEverHadLetter(data.entries);
 
   const hero = heroContent(heroState, { data, todaysEntry, draftWc, prompt }, diaryMood);
 
@@ -154,17 +155,30 @@ export function TodayScreen() {
           </View>
         </View>
 
-        {/* Sunday footer */}
-        <Pressable
-          disabled={!letterReady}
-          onPress={() => navigate('review')}
-          style={styles.sundayRow}
-        >
-          <Text style={styles.sundayLabel}>{everHadLetter ? "SUNDAY'S LETTER" : 'YOUR FIRST LETTER'}</Text>
+        {/* A letter from you is ready — the single most valuable card on this screen, so it
+            sits directly under Fragments rather than below the Letters row (§2). */}
+        {readyLetter && (
+          <Pressable
+            onPress={() => {
+              openLetter(readyLetter.id);
+              navigate('letterOpen', { letterId: readyLetter.id });
+            }}
+            style={styles.readyCard}
+          >
+            <View style={[styles.readyDot, { backgroundColor: colors.gold }]} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.readyTitle}>A letter from you is ready.</Text>
+              <Text style={styles.readySub}>{sealedInLabel(readyLetter)}</Text>
+            </View>
+            <Text style={styles.readyChevron}>›</Text>
+          </Pressable>
+        )}
+
+        {/* Letters row — always present, so the feature is discoverable before one is ready. */}
+        <Pressable onPress={() => navigate('letters')} style={styles.sundayRow}>
+          <Text style={styles.sundayLabel}>LETTERS TO LATER</Text>
           <View style={styles.sundayRule} />
-          <Text style={[styles.sundayValue, letterReady && { color: colors.ink }]}>
-            {!everHadLetter ? 'Sunday' : letterReady ? 'ready' : `in ${daysUntilSunday()} days`}
-          </Text>
+          <Text style={styles.sundayValue}>{nextOpening ?? (letters.length === 0 ? 'Write one' : 'None sealed')}</Text>
         </Pressable>
       </View>
     </ScrollView>
@@ -263,5 +277,18 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
   sundayLabel: { fontFamily: sans(400), fontSize: phiType.label, letterSpacing: 1.235, textTransform: 'uppercase', color: colors.faint2 },
   sundayRule: { flex: 1, height: 1, backgroundColor: colors.hair2 },
   sundayValue: { fontFamily: sans(400), fontSize: phiType.label, color: colors.faint },
+  readyCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: phiSpace.section,
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+    backgroundColor: colors.paperSunk,
+  },
+  readyDot: { width: 7, height: 7, borderRadius: 3.5 },
+  readyTitle: { fontFamily: serif(400), fontSize: 18, color: colors.ink },
+  readySub: { fontFamily: sans(400), fontSize: 10.5, letterSpacing: 0.3, color: colors.muted, marginTop: 5 },
+  readyChevron: { fontFamily: sans(400), fontSize: 18, color: colors.chevron },
   });
 }
