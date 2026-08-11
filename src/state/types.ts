@@ -191,7 +191,6 @@ export type Screen =
   | 'privacy'
   | 'paywall'
   | 'appearance'
-  | 'checkout'
   | 'purchased';
 
 // `naming`, `newLetter` and `letterOpen` are single-purpose screens with their own back
@@ -199,5 +198,5 @@ export type Screen =
 // the tab bar — RITUALS_ADDENDUM.md §4: it is not part of the diary.
 export const TABBED_SCREENS: Screen[] = [
   'today', 'entries', 'entry', 'echoes', 'you', 'search', 'empty', 'review', 'privacy', 'paywall',
-  'people', 'person', 'peopleEmpty', 'appearance', 'checkout', 'purchased', 'letters',
+  'people', 'person', 'peopleEmpty', 'appearance', 'purchased', 'letters',
 ];

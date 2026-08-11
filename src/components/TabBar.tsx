@@ -13,7 +13,7 @@ const WRITE_GROUP: Screen[] = ['today', 'write', 'sealed'];
 const ENTRIES_GROUP: Screen[] = ['entries', 'entry', 'search', 'review', 'empty'];
 const PEOPLE_GROUP: Screen[] = ['people', 'person', 'newPerson', 'peopleEmpty'];
 const ECHOES_GROUP: Screen[] = ['echoes', 'compose', 'signin'];
-const YOU_GROUP: Screen[] = ['you', 'privacy', 'paywall', 'appearance', 'checkout', 'purchased'];
+const YOU_GROUP: Screen[] = ['you', 'privacy', 'paywall', 'appearance', 'purchased'];
 
 export function TabBar() {
   const { screen, reset, goEntries, goPeople } = useApp();

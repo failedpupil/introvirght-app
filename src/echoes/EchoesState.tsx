@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { FeelId } from '../data/content';
-import { ApiError, EchoItem, feltEchoRequest, fetchEchoes, fetchStats, postEchoRequest, renameEchoesRequest, signOutRequest } from './api';
+import { ApiError, EchoItem, deleteAccountRequest, feltEchoRequest, fetchEchoes, fetchStats, postEchoRequest, renameEchoesRequest, signOutRequest } from './api';
 import { AuthedSession, googleSignOutNative } from './authClient';
 
 const SESSION_KEY = 'introvirght.echoSession.v1';
@@ -38,6 +38,8 @@ interface EchoesContextShape {
 
   completeGoogleSignIn: (session: AuthedSession) => Promise<void>;
   signOut: () => Promise<void>;
+  /** Irreversible. Returns how many echoes were erased. */
+  deleteAccount: () => Promise<number>;
 }
 
 const EchoesContext = createContext<EchoesContextShape | null>(null);
@@ -203,6 +205,26 @@ export function EchoesProvider({ children }: { children: React.ReactNode }) {
     if (token) signOutRequest(token).catch(() => {});
   }, []);
 
+  /**
+   * Erases the account server-side, then signs out locally.
+   *
+   * The server call comes first and its failure is surfaced, unlike sign-out's — a
+   * deletion that quietly failed while telling the user it worked would be the worst
+   * possible outcome for the one promise this app is built on.
+   */
+  const deleteAccount = useCallback(async (): Promise<number> => {
+    const token = sessionRef.current;
+    if (!token) throw new Error('Not signed in');
+    const { echoes } = await deleteAccountRequest(token);
+    setSession(null);
+    setFeed([]);
+    setQueuedItems([]);
+    setPendingPosts([]);
+    await SecureStore.deleteItemAsync(SESSION_KEY);
+    await googleSignOutNative();
+    return echoes;
+  }, []);
+
   const value = useMemo<EchoesContextShape>(
     () => ({
       ready,
@@ -222,6 +244,7 @@ export function EchoesProvider({ children }: { children: React.ReactNode }) {
       refreshStats,
       completeGoogleSignIn,
       signOut,
+      deleteAccount,
     }),
     [ready, session, feed, pendingPosts, queuedItems.length, fetching, statsCount, initialLoad, checkForNew, applyQueued, post, retryPost, renameEchoes, feltThis, refreshStats, completeGoogleSignIn, signOut]
   );

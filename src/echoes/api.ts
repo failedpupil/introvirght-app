@@ -86,6 +86,11 @@ export function feltEchoRequest(id: string, token: string): Promise<{ felt: numb
   return request(`/v1/echoes/${id}/felt`, { method: 'POST', headers: authHeader(token) });
 }
 
+/** Erases the Echoes account and every unexpired echo written under it. Irreversible. */
+export function deleteAccountRequest(token: string): Promise<{ ok: boolean; echoes: number }> {
+  return request('/v1/account/delete', { method: 'POST', headers: authHeader(token) });
+}
+
 export function fetchStats(): Promise<{ peopleTotal: number }> {
   return request('/v1/echoes/stats');
 }

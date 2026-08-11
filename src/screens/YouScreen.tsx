@@ -15,7 +15,7 @@ import { DiaryEntry } from '../state/types';
 
 export function YouScreen() {
   const { data, navigate, setOnboardStep, reset, letters } = useApp();
-  const { signedIn, signOut } = useEchoes();
+  const { signedIn, signOut, deleteAccount } = useEchoes();
   const { colors, paper } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -33,6 +33,32 @@ export function YouScreen() {
       { text: 'Cancel', style: 'cancel' },
       { text: 'Sign out', style: 'destructive', onPress: () => signOut() },
     ]);
+  };
+
+  /**
+   * Play policy requires an in-app deletion path, and the privacy policy promises this
+   * one. Two taps, because it cannot be undone — and it is careful to say what it does
+   * not touch, since "delete account" on a diary app reads as "delete my writing".
+   */
+  const onDeleteAccount = () => {
+    Alert.alert(
+      'Delete your Echoes account',
+      'This erases the hash of your email and every echo you have posted that has not already expired. Your diary is not touched — it is on this device and we never had a copy.\n\nThis cannot be undone.',
+      [
+        { text: 'Keep it', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            deleteAccount()
+              .then((echoes) =>
+                Alert.alert('Deleted', `Nothing of yours is left on our server${echoes > 0 ? `, including ${echoes} echo${echoes === 1 ? '' : 'es'}` : ''}.`)
+              )
+              .catch(() => Alert.alert('Not deleted', 'We could not reach the server, so nothing was deleted. Try again when you have a connection.'));
+          },
+        },
+      ]
+    );
   };
 
   const rows: { label: string; value: string; color: string; onPress: () => void }[] = [
@@ -61,6 +87,7 @@ export function YouScreen() {
     { label: 'Nudge when I stall', value: data.nudgePref === 'no' ? 'Off' : 'On', color: colors.ink, onPress: () => {} },
     { label: 'Evening reminder', value: data.remindAt, color: colors.muted, onPress: () => navigate('remind') },
     { label: 'Export everything', value: 'Plain text', color: colors.muted, onPress: () => exportEntriesAsPlainText(data.entries) },
+    ...(signedIn ? [{ label: 'Delete Echoes account', value: 'Permanent', color: colors.warn, onPress: onDeleteAccount }] : []),
   ];
 
   return (

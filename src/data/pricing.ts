@@ -1,47 +1,59 @@
 /**
- * The one place both prices exist in the codebase (APPEARANCE_BILLING_ADDENDUM.md §2:
- * "do not hardcode them in more than one place"). Paywall and Checkout both read from
- * here — neither screen writes ₹199 or ₹1,499 itself. Both are explicitly placeholders
- * pending the client's pricing decision.
+ * The Play products, and the copy around them.
+ *
+ * There are deliberately **no prices in this file**. Play localises every price and
+ * requires the local currency be shown, so the only correct price is the `displayPrice`
+ * on the `ProductDetails` the store hands back at runtime (RELEASE_ADDENDUM.md §3.1).
+ * A hardcoded "₹199" would be wrong for most of the world and stale for the rest.
+ *
+ * The ids below are shared with Play Console and with the server's
+ * `src/billing/products.ts`. All three must agree exactly.
  */
-export type PlanChoice = 'annual' | 'lifetime';
+export type PlanChoice = 'annual' | 'monthly' | 'lifetime';
 
-export interface PriceDef {
+export interface PlanDef {
   id: PlanChoice;
-  amountLabel: string;
+  /** The Play product id. Must match Play Console and the server. */
+  sku: string;
+  /** Play sells subscriptions and one-time products through different calls. */
+  kind: 'subs' | 'in-app';
+  /** The word after the price: "₹199 a year". */
   term: string;
+  /** Shown under the price. Must not state an amount — see the note above. */
   note: string;
-  ctaLabel: string;
-  /** Line-item breakdown for Checkout — base + gst always sums to the headline amount. */
-  base: number;
-  gst: number;
-  total: number;
-  dueToday: number;
 }
 
-export const PRICING: Record<PlanChoice, PriceDef> = {
+export const PLANS: Record<PlanChoice, PlanDef> = {
   annual: {
     id: 'annual',
-    amountLabel: '₹199',
+    sku: 'introvirght_year',
+    kind: 'subs',
     term: 'a year',
-    note: 'About ₹17 a month',
-    ctaLabel: 'Try Quiet for 14 days',
-    base: 169,
-    gst: 30,
-    total: 199,
-    dueToday: 0,
+    note: 'The usual choice, and the cheapest by the month.',
+  },
+  monthly: {
+    id: 'monthly',
+    sku: 'introvirght_month',
+    kind: 'subs',
+    term: 'a month',
+    note: 'If you would rather not commit to a year.',
   },
   lifetime: {
     id: 'lifetime',
-    amountLabel: '₹1,499',
+    sku: 'introvirght_lifetime',
+    kind: 'in-app',
     term: 'once',
-    note: 'No subscription at all',
-    ctaLabel: 'Pay once · ₹1,499',
-    base: 1270,
-    gst: 229,
-    total: 1499,
-    dueToday: 1499,
+    note: 'No subscription at all. Every future version included.',
   },
 };
 
+export const PLAN_ORDER: PlanChoice[] = ['annual', 'monthly', 'lifetime'];
 export const DEFAULT_PLAN: PlanChoice = 'annual';
+
+export const ALL_SKUS = PLAN_ORDER.map((p) => PLANS[p].sku);
+export const SUBSCRIPTION_SKUS = PLAN_ORDER.filter((p) => PLANS[p].kind === 'subs').map((p) => PLANS[p].sku);
+export const ONE_TIME_SKUS = PLAN_ORDER.filter((p) => PLANS[p].kind === 'in-app').map((p) => PLANS[p].sku);
+
+export function planForSku(sku: string): PlanDef | undefined {
+  return PLAN_ORDER.map((p) => PLANS[p]).find((p) => p.sku === sku);
+}

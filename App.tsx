@@ -10,6 +10,7 @@ import { fontAssets } from './src/theme/fonts';
 import { ThemeProvider, useTheme } from './src/theme/ThemeState';
 import { AppProvider, useApp } from './src/state/AppState';
 import { EchoesProvider } from './src/echoes/EchoesState';
+import { BillingProvider } from './src/billing/BillingState';
 import { TABBED_SCREENS } from './src/state/types';
 import { TabBar } from './src/components/TabBar';
 
@@ -42,7 +43,6 @@ import { YouScreen } from './src/screens/YouScreen';
 import { PrivacyScreen } from './src/screens/PrivacyScreen';
 import { PaywallScreen } from './src/screens/PaywallScreen';
 import { AppearanceScreen } from './src/screens/AppearanceScreen';
-import { CheckoutScreen } from './src/screens/CheckoutScreen';
 import { PurchasedScreen } from './src/screens/PurchasedScreen';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -118,8 +118,6 @@ function Router() {
       return <PaywallScreen />;
     case 'appearance':
       return <AppearanceScreen />;
-    case 'checkout':
-      return <CheckoutScreen />;
     case 'purchased':
       return <PurchasedScreen />;
     default:
@@ -160,7 +158,10 @@ export default function App() {
       <ThemeProvider>
         <EchoesProvider>
           <AppProvider>
-            <Shell />
+            {/* Inside AppProvider: billing caches the server's entitlement answer there. */}
+            <BillingProvider>
+              <Shell />
+            </BillingProvider>
           </AppProvider>
         </EchoesProvider>
       </ThemeProvider>

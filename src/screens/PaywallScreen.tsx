@@ -1,10 +1,11 @@
-import React, { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { serif, sans } from '../theme/fonts';
 import { useTheme } from '../theme/ThemeState';
 import { Kicker, PrimaryButton } from '../components/Basics';
 import { useApp } from '../state/AppState';
-import { DEFAULT_PLAN, PRICING, PlanChoice } from '../data/pricing';
+import { DEFAULT_PLAN, PLANS, PLAN_ORDER, PlanChoice } from '../data/pricing';
+import { useBilling } from '../billing/BillingState';
 
 const FEATURE_ROWS: { tag: 'Free' | 'Quiet'; label: string; note: string }[] = [
   { tag: 'Free', label: 'Unlimited pages, people and echoes', note: 'Forever. Not a trial, not a page limit.' },
@@ -18,14 +19,55 @@ const FEATURE_ROWS: { tag: 'Free' | 'Quiet'; label: string; note: string }[] = [
   { tag: 'Quiet', label: 'Print your year', note: 'A typeset PDF of any twelve months.' },
 ];
 
+/**
+ * The six states from RELEASE_ADDENDUM.md §3.5, in the app's own register — plain,
+ * no exclamation marks, no "Oops". Each says what happened and what to do next.
+ */
+const STATUS_LINE: Record<string, string> = {
+  loading_prices: 'Asking Google Play what this costs where you are…',
+  prices_unavailable: 'Google Play did not answer, so we cannot show you a price we are sure of.',
+  purchase_pending: 'Your bank is still deciding. This can take a few days with some payment methods, and Quiet turns on by itself the moment it clears.',
+  purchase_failed: 'That did not go through, and you have not been charged.',
+  already_subscribed: 'You already have Quiet on this Google account.',
+  restore_found_nothing: 'Nothing to restore on this Google account. If you paid with a different one, sign in to Google Play with that account first.',
+};
+
 export function PaywallScreen() {
   const { navigate } = useApp();
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [plan, setPlan] = useState<PlanChoice>(DEFAULT_PLAN);
+  const { status, priceFor, entitled, busy, buy, restore, retryPrices } = useBilling();
+
+  // Only a *transition* into entitlement means "you just bought it" — arriving here
+  // already subscribed should show the paywall's already-subscribed line instead of
+  // bouncing someone to a thank-you screen they did not earn this session.
+  const wasEntitled = useRef(entitled);
+  useEffect(() => {
+    if (entitled && !wasEntitled.current) navigate('purchased', { replace: true, planChoice: plan });
+    wasEntitled.current = entitled;
+  }, [entitled, navigate, plan]);
 
   const goYou = () => navigate('you', { replace: true });
-  const goCheckout = () => navigate('checkout', { planChoice: plan });
+  const pricesReady = PLAN_ORDER.some((p) => priceFor(p) !== null);
+  const statusLine = STATUS_LINE[status];
+
+  // The button says what tapping it does, and stops claiming a price we do not have.
+  const ctaLabel = entitled
+    ? 'You already have Quiet'
+    : status === 'loading_prices'
+      ? 'One moment'
+      : !pricesReady
+        ? 'Try again'
+        : plan === 'lifetime'
+          ? `Pay once · ${priceFor('lifetime')}`
+          : `Subscribe · ${priceFor(plan)} ${PLANS[plan].term}`;
+
+  const onPrimary = () => {
+    if (entitled) return;
+    if (!pricesReady) return void retryPrices();
+    void buy(plan);
+  };
 
   return (
     <ScrollView style={styles.root} showsVerticalScrollIndicator={false}>
@@ -54,15 +96,17 @@ export function PaywallScreen() {
 
       <View style={{ padding: 26 }}>
         <View style={{ gap: 2 }}>
-          {(Object.keys(PRICING) as PlanChoice[]).map((id) => {
-            const def = PRICING[id];
+          {PLAN_ORDER.map((id) => {
+            const def = PLANS[id];
             const selected = plan === id;
+            const price = priceFor(id);
             return (
-              <Pressable key={id} onPress={() => setPlan(id)} style={styles.priceRow}>
+              <Pressable key={id} onPress={() => setPlan(id)} style={styles.priceRow} disabled={busy}>
                 <View style={[styles.priceDot, selected ? { backgroundColor: colors.ink, borderColor: colors.ink } : { borderColor: colors.hair3 }]} />
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
-                    <Text style={[styles.priceAmount, selected && { color: colors.ink }]}>{def.amountLabel}</Text>
+                    {/* Never a hardcoded amount: until Play answers there is a dash, not a guess. */}
+                    <Text style={[styles.priceAmount, selected && { color: colors.ink }]}>{price ?? '—'}</Text>
                     <Text style={styles.priceTerm}>{def.term}</Text>
                   </View>
                 </View>
@@ -72,16 +116,36 @@ export function PaywallScreen() {
           })}
         </View>
 
-        <PrimaryButton label={PRICING[plan].ctaLabel} onPress={goCheckout} style={{ marginTop: 22 }} />
+        {!!statusLine && (
+          <View style={styles.statusBlock}>
+            {status === 'loading_prices' ? (
+              <View style={styles.statusLoadingRow}>
+                <ActivityIndicator size="small" color={colors.faint} />
+                <Text style={styles.statusText}>{statusLine}</Text>
+              </View>
+            ) : (
+              <Text style={styles.statusText}>{statusLine}</Text>
+            )}
+          </View>
+        )}
+
+        <PrimaryButton
+          label={busy ? 'Talking to Google Play…' : ctaLabel}
+          onPress={onPrimary}
+          disabled={busy || entitled || status === 'loading_prices'}
+          style={{ marginTop: 22 }}
+        />
         <View style={styles.linksRow}>
-          <Pressable onPress={goYou}>
+          <Pressable onPress={goYou} disabled={busy}>
             <Text style={styles.linkLabel}>Stay on free</Text>
           </Pressable>
-          <Pressable onPress={goYou}>
-            <Text style={styles.linkLabel}>Restore</Text>
+          <Pressable onPress={() => void restore()} disabled={busy}>
+            <Text style={styles.linkLabel}>Restore purchases</Text>
           </Pressable>
         </View>
-        <Text style={styles.disclaimer}>No card until day 14. One reminder before it renews. Cancel and your entries stay — they are on your device, not ours.</Text>
+        <Text style={styles.disclaimer}>
+          Google Play takes the payment and holds the card; we never see it. Cancel any time in Play, and your entries stay either way — they are on your device, not ours.
+        </Text>
       </View>
     </ScrollView>
   );
@@ -105,6 +169,10 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
     priceAmount: { fontFamily: serif(300), fontSize: 24, letterSpacing: -0.3, color: colors.ink3 },
     priceTerm: { fontFamily: sans(400), fontSize: 11, color: colors.muted },
     priceRightNote: { fontFamily: sans(400), fontSize: 10, color: colors.faint2, maxWidth: 130, textAlign: 'right' },
+
+    statusBlock: { marginTop: 18, paddingTop: 14, borderTopWidth: 1, borderTopColor: colors.hair2 },
+    statusLoadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    statusText: { flex: 1, fontFamily: serif(300), fontSize: 15.5, lineHeight: 22, color: colors.muted },
 
     linksRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginTop: 16 },
     linkLabel: { fontFamily: sans(400), fontSize: 10, letterSpacing: 0.8, textTransform: 'uppercase', color: colors.faint },

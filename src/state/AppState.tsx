@@ -85,7 +85,7 @@ interface AppContextShape {
   tagDraftPerson: (personId: string) => void;
   foldInFragments: () => void;
   sealEntry: () => void;
-  setPlan: (p: Plan) => void;
+  setVerifiedPlan: (p: Plan) => void;
 
   people: Person[];
   addPerson: (input: NewPersonInput) => Person;
@@ -214,7 +214,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setRhythm = useCallback((rhythm: Rhythm) => update({ rhythm }), [update]);
   const setNudgePref = useCallback((nudgePref: NudgePref) => update({ nudgePref }), [update]);
   const setRemindAt = useCallback((remindAt: string) => update({ remindAt }), [update]);
-  const setPlan = useCallback((plan: Plan) => update({ plan }), [update]);
+  /**
+   * Caches the entitlement the *server* returned, so Quiet survives being offline.
+   *
+   * This is not a switch the app may flip for itself. The only legitimate caller is
+   * BillingProvider, immediately after `/v1/entitlement/*` answered — nothing else in
+   * the app should ever set a plan, because a premium flag the client can write is a
+   * premium flag anyone can write (RELEASE_ADDENDUM.md §4).
+   */
+  const setVerifiedPlan = useCallback((plan: Plan) => update({ plan }), [update]);
 
   const completeOnboarding = useCallback(() => {
     update({ onboarded: true, startedAtMs: latestData.current.startedAtMs ?? Date.now() });
@@ -445,7 +453,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       tagDraftPerson,
       foldInFragments,
       sealEntry,
-      setPlan,
+      setVerifiedPlan,
       people,
       addPerson,
       updatePerson,
@@ -489,7 +497,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       tagDraftPerson,
       foldInFragments,
       sealEntry,
-      setPlan,
+      setVerifiedPlan,
       people,
       addPerson,
       updatePerson,
