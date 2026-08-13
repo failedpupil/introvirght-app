@@ -1,5 +1,5 @@
-import React from 'react';
-import Svg, { Path, Circle, Rect } from 'react-native-svg';
+import React, { useId } from 'react';
+import Svg, { Path, Circle, Rect, Defs, ClipPath, G } from 'react-native-svg';
 import { useTheme } from '../theme/ThemeState';
 
 export interface IconProps {
@@ -8,17 +8,47 @@ export interface IconProps {
   strokeWidth?: number;
 }
 
-/** Two hairline brackets closing inward around a centred dot. */
+/** The mark's two colours. Fixed rather than themed: the identity should not shift
+ * hue with the chosen paper, only invert for dark ground. */
+const INK = '#1A1815';
+const PAPER = '#FCFBF8';
+
+/**
+ * A closed notebook seen face-on, its elastic band still fastened: a solid rounded
+ * tile with an off-centre band bleeding top to bottom.
+ *
+ * The band sits at x=67, overlapping the top-right corner curve (which starts at
+ * x=72), so it *must* be clipped by the tile — unclipped, it pokes out past the
+ * radius. The 70% position is deliberate: centred reads as a stripe, further right
+ * gets eaten by the corner.
+ *
+ * Two filled rectangles and no strokes, so it survives down to 16px without the
+ * hairline-disappearing problem the old bracket mark had.
+ */
 export function LogoMark({ size = 40, color }: IconProps) {
-  const { colors } = useTheme();
-  color = color ?? colors.ink;
-  const scale = size / 40;
-  const strokeWidth = 1.4 * Math.max(1, 1 / scale) * scale + (size <= 34 ? 1.2 * scale : 0);
+  const { paper } = useTheme();
+  // React's useId contains colons, which are not valid in an SVG id / url(#…)
+  // reference. A unique id per instance is load-bearing here: duplicate ids in one
+  // document collapse to the first definition, and the clip silently stops working
+  // on re-render, letting the band overrun the corner.
+  const clipId = `ivMark${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
+
+  // The app's own ink/paper, not the identity sheet's slate — the geometry carries
+  // the identity, and a fifth colour is not worth introducing. Night inverts.
+  const tile = color ?? (paper === 'night' ? PAPER : INK);
+  const band = paper === 'night' ? INK : PAPER;
+
   return (
-    <Svg width={size} height={size} viewBox="0 0 40 40" fill="none">
-      <Path d="M13 5H7.5v30H13" stroke={color} strokeWidth={size <= 34 ? 2.6 : 1.4} strokeLinecap="round" />
-      <Path d="M27 5h5.5v30H27" stroke={color} strokeWidth={size <= 34 ? 2.6 : 1.4} strokeLinecap="round" />
-      <Circle cx={20} cy={20} r={2.6} fill={color} />
+    <Svg width={size} height={size} viewBox="0 0 100 100">
+      <Defs>
+        <ClipPath id={clipId}>
+          <Rect x={8} y={8} width={84} height={84} rx={20} />
+        </ClipPath>
+      </Defs>
+      <G clipPath={`url(#${clipId})`}>
+        <Rect x={8} y={8} width={84} height={84} fill={tile} />
+        <Rect x={67} y={8} width={7} height={84} fill={band} />
+      </G>
     </Svg>
   );
 }
