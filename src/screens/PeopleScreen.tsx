@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { serif, sans } from '../theme/fonts';
 import { useTheme } from '../theme/ThemeState';
 import { PersonAvatar } from '../components/PersonAvatar';
@@ -11,8 +11,8 @@ import { mapSummary, peopleInRing } from '../utils/people';
 
 type ViewMode = 'everyone' | 'map';
 
+/** The diagram's design width. MapView scales everything down from this to fit. */
 const BOX = 350;
-const CENTER = BOX / 2;
 
 export function PeopleScreen() {
   const { people, navigate } = useApp();
@@ -90,6 +90,13 @@ function PersonRow({ person, onPress }: { person: Person; onPress: () => void })
 function MapView({ people, onOpen }: { people: Person[]; onOpen: (id: string) => void }) {
   const { colors, energyColor } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  // The map was drawn at a fixed 350, which is wider than the content column on most
+  // phones (308 on a 360pt screen) — the outer ring and the furthest names fell off
+  // the edge. Scale the whole diagram to whatever width there actually is.
+  const { width: screenW } = useWindowDimensions();
+  const box = Math.min(BOX, screenW - 52);
+  const center = box / 2;
+  const s = box / BOX;
   const summary = useMemo(() => mapSummary(people), [people]);
   const legendCounts = useMemo(() => {
     const counts = { gives: 0, neutral: 0, takes: 0 } as Record<'gives' | 'neutral' | 'takes', number>;
@@ -101,33 +108,36 @@ function MapView({ people, onOpen }: { people: Person[]; onOpen: (id: string) =>
     <View style={{ paddingHorizontal: 26, paddingTop: 26 }}>
       <Text style={styles.mapSummary}>{summary}</Text>
       <View style={styles.mapBoxWrap}>
-        <View style={styles.mapBox}>
-          {CLOSENESS_RINGS.map((ring) => (
-            <View
-              key={ring.id}
-              style={[
-                styles.ringCircle,
-                {
-                  width: ring.diameter,
-                  height: ring.diameter,
-                  borderRadius: ring.diameter / 2,
-                  left: CENTER - ring.diameter / 2,
-                  top: CENTER - ring.diameter / 2,
-                  borderColor: ring.id === 'inner' ? colors.hair3 : ring.id === 'near' ? colors.hair2 : colors.paperSunk,
-                },
-              ]}
-            />
-          ))}
-          <View style={styles.youDot} />
-          <Text style={styles.youLabel}>YOU</Text>
+        <View style={[styles.mapBox, { width: box, height: box }]}>
+          {CLOSENESS_RINGS.map((ring) => {
+            const d = ring.diameter * s;
+            return (
+              <View
+                key={ring.id}
+                style={[
+                  styles.ringCircle,
+                  {
+                    width: d,
+                    height: d,
+                    borderRadius: d / 2,
+                    left: center - d / 2,
+                    top: center - d / 2,
+                    borderColor: ring.id === 'inner' ? colors.hair3 : ring.id === 'near' ? colors.hair2 : colors.paperSunk,
+                  },
+                ]}
+              />
+            );
+          })}
+          <View style={[styles.youDot, { left: center - 3.5, top: center - 3.5 }]} />
+          <Text style={[styles.youLabel, { left: center - 20, top: center + 8 }]}>YOU</Text>
           {people.map((p) => {
             const ring = CLOSENESS_RINGS.find((r) => r.id === p.closeness)!;
             const rad = (p.angle * Math.PI) / 180;
             const estWidth = Math.min(72, Math.max(32, p.name.length * 5.4));
-            let x = CENTER + Math.cos(rad) * ring.radius;
-            let y = CENTER + Math.sin(rad) * ring.radius;
-            x = Math.min(BOX - estWidth / 2, Math.max(estWidth / 2, x));
-            y = Math.min(BOX - 14, Math.max(10, y));
+            let x = center + Math.cos(rad) * ring.radius * s;
+            let y = center + Math.sin(rad) * ring.radius * s;
+            x = Math.min(box - estWidth / 2, Math.max(estWidth / 2, x));
+            y = Math.min(box - 14, Math.max(10, y));
             return (
               <Pressable
                 key={p.id}
@@ -208,10 +218,12 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
 
     mapSummary: { fontFamily: serif(300), fontStyle: 'italic', fontSize: 20, lineHeight: 29, color: colors.ink3, maxWidth: 300 },
     mapBoxWrap: { alignItems: 'center', marginTop: 30 },
-    mapBox: { width: BOX, height: BOX },
+    // Size and the centred positions below are supplied by MapView, which scales the
+    // whole diagram to the available width.
+    mapBox: {},
     ringCircle: { position: 'absolute', borderWidth: 1 },
-    youDot: { position: 'absolute', width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.ink, left: CENTER - 3.5, top: CENTER - 3.5 },
-    youLabel: { position: 'absolute', left: CENTER - 20, top: CENTER + 8, width: 40, textAlign: 'center', fontFamily: sans(400), fontSize: 8.5, letterSpacing: 1.4, color: colors.faint },
+    youDot: { position: 'absolute', width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.ink },
+    youLabel: { position: 'absolute', width: 40, textAlign: 'center', fontFamily: sans(400), fontSize: 8.5, letterSpacing: 1.4, color: colors.faint },
     personDotWrap: { position: 'absolute', alignItems: 'center' },
     personDot: { width: 9, height: 9, borderRadius: 4.5 },
     personDotLabel: { fontFamily: sans(400), fontSize: 9, color: colors.ink4, marginTop: 4 },
