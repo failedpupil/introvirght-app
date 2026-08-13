@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import * as Notifications from 'expo-notifications';
@@ -128,6 +128,7 @@ function Router() {
 function Shell() {
   const { ready, screen } = useApp();
   const { ready: themeReady, colors, paper } = useTheme();
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (ready && themeReady) SplashScreen.hideAsync().catch(() => {});
@@ -140,10 +141,35 @@ function Shell() {
   return (
     <View style={[styles.root, { backgroundColor: colors.paper }]}>
       <StatusBar style={paper === 'night' ? 'light' : 'dark'} />
-      <View style={{ flex: 1 }}>
+      {/*
+        Android draws edge-to-edge by default from SDK 52 on, so screens sit under the
+        status bar. Each screen's own paddingTop was authored against a ~28pt bar, so
+        rather than edit all 23 of them the difference is applied once here — the gap
+        below the bar then measures the same on a short Android bar and a tall notch.
+      */}
+      <View style={{ flex: 1, paddingTop: Math.max(0, insets.top - DESIGN_STATUS_BAR) }}>
         <Router />
       </View>
       {showTabs && <TabBar />}
+      {/*
+        Drawn last and absolutely positioned so it sits above the screens. Padding only
+        places content at rest: a ScrollView's children scroll up *through* their own
+        padding, which is why list rows were colliding with the clock. An opaque band
+        in the app's paper hides them, and matches the status bar's own ground.
+      */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: insets.top,
+          backgroundColor: colors.paper,
+          zIndex: 10,
+          elevation: 10,
+        }}
+      />
     </View>
   );
 }
@@ -168,6 +194,14 @@ export default function App() {
     </SafeAreaProvider>
   );
 }
+
+/**
+ * The status bar height the screens' own paddingTop values were drawn against. Only
+ * the difference from the real inset is added at runtime, so a device that matches
+ * this renders exactly as designed and taller bars/notches get exactly the extra
+ * they need — no screen has to know about safe areas.
+ */
+const DESIGN_STATUS_BAR = 28;
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
