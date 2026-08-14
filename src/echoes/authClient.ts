@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { GOOGLE_CLIENT_IDS, googleConfigured } from './config';
 import { googleAuth, ApiError } from './api';
 
@@ -32,6 +32,33 @@ function ensureConfigured(): void {
   configured = true;
 }
 
+/**
+ * The native SDK reports failures as a `code` on the error, and its message is usually
+ * just the code repeated — which tells a user nothing and, worse, tells whoever is
+ * debugging the build nothing either. DEVELOPER_ERROR in particular has exactly one
+ * cause worth naming: the certificate this build is signed with is not on an Android
+ * OAuth client, so it appears only in release builds and never on the machine that
+ * made them.
+ */
+function describeSignInError(err: unknown): string {
+  const code = (err as { code?: string | number })?.code;
+  const raw = err instanceof Error ? err.message : '';
+  switch (String(code)) {
+    case 'DEVELOPER_ERROR':
+    case '10':
+      return "This build's signing certificate isn't registered for Google sign-in. Nothing is wrong with your account.";
+    case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
+      return 'Google Play services is missing or needs updating on this device.';
+    case statusCodes.IN_PROGRESS:
+      return 'Already signing in.';
+    case statusCodes.SIGN_IN_CANCELLED:
+      return 'Signing in was cancelled.';
+    default:
+      // Keep the code visible: an unnamed failure here is very hard to chase down later.
+      return raw ? `Google sign-in failed${code ? ` (${code})` : ''}: ${raw}` : `Google sign-in failed${code ? ` (${code})` : ''}`;
+  }
+}
+
 export function useGoogleSignIn(onSuccess: (session: AuthedSession) => void, onError: (message: string) => void) {
   const [exchanging, setExchanging] = useState(false);
 
@@ -55,7 +82,8 @@ export function useGoogleSignIn(onSuccess: (session: AuthedSession) => void, onE
       const session = await googleAuth(idToken);
       onSuccess(session);
     } catch (err) {
-      onError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Google sign-in failed');
+      if (err instanceof ApiError) onError(err.message);
+      else onError(describeSignInError(err));
     } finally {
       setExchanging(false);
     }
