@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { serif, sans } from '../theme/fonts';
 import { useTheme } from '../theme/ThemeState';
 import { DiaryMoodShape } from '../theme/colors';
-import { CARD_WIDTH, HERO_HEIGHT, SURFACED_HEIGHT, phiSpace, phiType } from '../theme/metrics';
+import { phiSpace, phiType, usePhiCard } from '../theme/metrics';
 import { useApp } from '../state/AppState';
 import { PROMPTS } from '../data/content';
 import { fullDate, timeLabel, weekdayName } from '../utils/date';
@@ -17,6 +17,9 @@ export function TodayScreen() {
   const { data, todayIso, todaysEntry, addFragment, navigate, setDraftText, people, letters, openLetter } = useApp();
   const { colors, diaryMood } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  // Both gutters stay equal on any screen; a fixed card width overran the right edge
+  // on anything narrower than the 402pt the home screen was drawn at.
+  const card = usePhiCard();
   const [frag, setFrag] = useState('');
   const now = useState(() => new Date())[0];
 
@@ -97,7 +100,7 @@ export function TodayScreen() {
         {/* Hero */}
         <Pressable
           onPress={openHero}
-          style={({ pressed }) => [styles.hero, pressed && { backgroundColor: colors.paperSunkHover }]}
+          style={({ pressed }) => [styles.hero, { width: card.cardWidth, height: card.heroHeight }, pressed && { backgroundColor: colors.paperSunkHover }]}
         >
           <View style={styles.heroTop}>
             <View style={[styles.heroDot, { backgroundColor: hero.dot }]} />
@@ -112,7 +115,7 @@ export function TodayScreen() {
 
         {/* Surfaced */}
         {surfaced && (
-          <View style={styles.surfaced}>
+          <View style={[styles.surfaced, { width: card.cardWidth, minHeight: card.surfacedHeight }]}>
             <View style={styles.surfacedTop}>
               <Text style={styles.surfacedKicker}>{surfaced.kicker}</Text>
               {pool.length > 1 && (
@@ -230,8 +233,7 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
   pagesLabel: { fontFamily: sans(400), fontSize: 9, letterSpacing: 1.26, textTransform: 'uppercase', color: colors.faint2, marginTop: 2 },
 
   hero: {
-    width: CARD_WIDTH,
-    height: HERO_HEIGHT,
+    // width/height supplied by usePhiCard at render — see TodayScreen.
     backgroundColor: colors.paperSunk,
     padding: phiSpace.gutter,
     marginTop: phiSpace.section,
@@ -246,8 +248,7 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
   heroMeta: { fontFamily: sans(400), fontSize: phiType.label, color: colors.faint },
 
   surfaced: {
-    width: CARD_WIDTH,
-    minHeight: SURFACED_HEIGHT,
+    // width/minHeight supplied by usePhiCard at render.
     borderWidth: 1,
     borderColor: colors.hair,
     padding: phiSpace.gutter,
