@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
@@ -142,15 +142,24 @@ function Shell() {
     <View style={[styles.root, { backgroundColor: colors.paper }]}>
       <StatusBar style={paper === 'night' ? 'light' : 'dark'} />
       {/*
-        Android draws edge-to-edge by default from SDK 52 on, so screens sit under the
-        status bar. Each screen's own paddingTop was authored against a ~28pt bar, so
-        rather than edit all 23 of them the difference is applied once here — the gap
-        below the bar then measures the same on a short Android bar and a tall notch.
+        Keyboard avoidance belongs here rather than in each screen. Ten screens take
+        text and only one used to handle the keyboard, so the rest let it sit over the
+        field being typed into. Under edge-to-edge the window no longer resizes itself,
+        so something has to do this explicitly — doing it once means a new screen with a
+        text field is correct without anyone having to remember.
       */}
-      <View style={{ flex: 1, paddingTop: Math.max(0, insets.top - DESIGN_STATUS_BAR) }}>
-        <Router />
-      </View>
-      {showTabs && <TabBar />}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+        {/*
+          Android draws edge-to-edge by default from SDK 52 on, so screens sit under the
+          status bar. Each screen's own paddingTop was authored against a ~28pt bar, so
+          rather than edit all 23 of them the difference is applied once here — the gap
+          below the bar then measures the same on a short Android bar and a tall notch.
+        */}
+        <View style={{ flex: 1, paddingTop: Math.max(0, insets.top - DESIGN_STATUS_BAR) }}>
+          <Router />
+        </View>
+        {showTabs && <TabBar />}
+      </KeyboardAvoidingView>
       {/*
         Drawn last and absolutely positioned so it sits above the screens. Padding only
         places content at rest: a ScrollView's children scroll up *through* their own

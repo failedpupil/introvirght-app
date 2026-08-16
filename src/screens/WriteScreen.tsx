@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
   Animated,
-  KeyboardAvoidingView,
   NativeSyntheticEvent,
   Pressable,
   ScrollView,
@@ -197,13 +196,7 @@ export function WriteScreen() {
     : 'Optional';
 
   return (
-    <KeyboardAvoidingView
-      style={styles.root}
-      // Android used to need no behavior here, because adjustResize shrank the window
-      // for you. Under edge-to-edge (the default since SDK 52) the window no longer
-      // resizes, so an unset behavior leaves the keyboard sitting over the page.
-      behavior="padding"
-    >
+    <View style={styles.root}>
       <View style={styles.topBar}>
         <Pressable onPress={goBack} hitSlop={8}>
           <Text style={styles.topLabel}>Close</Text>
@@ -363,7 +356,7 @@ export function WriteScreen() {
           <Text style={styles.footerWords}>{wc === 0 ? 'No words yet' : `${wc} words`}</Text>
         </View>
       </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
