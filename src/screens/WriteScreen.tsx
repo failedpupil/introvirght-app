@@ -4,7 +4,6 @@ import {
   Animated,
   KeyboardAvoidingView,
   NativeSyntheticEvent,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -65,6 +64,10 @@ export function WriteScreen() {
 
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fade = useRef(new Animated.Value(0)).current;
+  const bodyRef = useRef<ScrollView>(null);
+  /** Whether the caret sits at the very end — a ref, not state, so following the text
+   * down costs no re-render on a screen that re-renders on every keystroke. */
+  const atEndRef = useRef(true);
 
   const tpl = TEMPLATES.find((t) => t.id === data.draftTemplate) || TEMPLATES[0];
   const wc = wordCount(data.draftText);
@@ -125,6 +128,14 @@ export function WriteScreen() {
 
   const onContentSizeChange = (e: NativeSyntheticEvent<TextInputContentSizeChangeEventData>) => {
     setBodyHeight(Math.max(MIN_BODY_HEIGHT, e.nativeEvent.contentSize.height));
+    // A multiline TextInput inside a ScrollView does not scroll its own caret into
+    // view, so once the page is longer than the space above the keyboard the line
+    // being written disappears under it. Follow the text down — but only while the
+    // caret is at the end, so scrolling back to reread an earlier paragraph is not
+    // yanked away on the next keystroke.
+    if (atEndRef.current) {
+      requestAnimationFrame(() => bodyRef.current?.scrollToEnd({ animated: false }));
+    }
   };
 
   const pickTemplate = (id: TemplateId) => {
@@ -188,7 +199,10 @@ export function WriteScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.root}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      // Android used to need no behavior here, because adjustResize shrank the window
+      // for you. Under edge-to-edge (the default since SDK 52) the window no longer
+      // resizes, so an unset behavior leaves the keyboard sitting over the page.
+      behavior="padding"
     >
       <View style={styles.topBar}>
         <Pressable onPress={goBack} hitSlop={8}>
@@ -217,6 +231,7 @@ export function WriteScreen() {
       </ScrollView>
 
       <ScrollView
+        ref={bodyRef}
         style={styles.body}
         contentContainerStyle={{ paddingHorizontal: 26, paddingTop: 22, paddingBottom: 28 }}
         showsVerticalScrollIndicator={false}
@@ -242,7 +257,10 @@ export function WriteScreen() {
             onChangeText={onChangeText}
             onContentSizeChange={onContentSizeChange}
             selection={pendingCaret == null ? undefined : { start: pendingCaret, end: pendingCaret }}
-            onSelectionChange={() => setPendingCaret(null)}
+            onSelectionChange={(e) => {
+              atEndRef.current = e.nativeEvent.selection.end >= data.draftText.length;
+              setPendingCaret(null);
+            }}
             placeholder={tpl.ph}
             placeholderTextColor={colors.placeholder}
             multiline
